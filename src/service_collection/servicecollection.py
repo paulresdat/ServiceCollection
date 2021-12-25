@@ -152,16 +152,27 @@ class Configuration(object):
         for x in annotations:
             cl_name = self.__scrub_name(x)
             try:
-                cl_type = eval(annotations[x].__name__, self.__globals, locals())
+                # weird typing type workaround?  Needs more analysis
+                # print(x)
+                if (type(annotations[x]).__name__ == "_SpecialGenericAlias"):
+                    n = annotations[x].__dict__['_name']
+                else:
+                    n = annotations[x].__name__
+                cl_type = eval(n, self.__globals, locals())
             except TypeError as e:
                 print("A type error occurred in your configuration: " + cl_name + " : " + str(annotations[x]))
                 raise e
+            except Exception as e:
+                # TODO - this needs to be figured out and a better error message needs to be here
+                print("A general error has occurred in your configuration: " + cl_name + " : " + str(annotations[x]))
+                print(e.args)
+                exit()
             inner_annotations = None
             # TODO - figure out a more elegant way of doing this
-            if cl_type.__name__ not in ['str', 'float', 'int', 'list', 'dict', 'tuple', 'bool']:
+            if type(cl_type).__name__ != "_SpecialGenericAlias" and \
+                cl_type.__name__ not in ['str', 'float', 'int', 'list', 'dict', 'tuple', 'bool', 'typing.List']:
                 members = inspect.getmembers(cl_type)
                 try:
-                    # print(members)
                     inner_annotations = self.__get_annotations(members)
                 except Exception as e:
                     print("There was an issue retrieving annotations for " + x + " with type " + str(cl_type.__name__))
@@ -332,7 +343,6 @@ class ServiceCollection(object):
         return sc
 
     def __construct_service(self, service_as_string):
-        print(service_as_string)
         self.log("Forming service: " + service_as_string)
         tmp = self.__service_collection[service_as_string]
         if tmp['type'] == 'singleton':
