@@ -1,0 +1,15 @@
+{
+    "name": "hello",
+    "complex": {
+        "name": "hello2"
+    },
+    "complex_object": {
+        "complex1": {
+            "term1": "one",
+            "term2": "two"
+        },
+        "value1": true,
+        "value2": 1,
+        "value3": [1,2,3,4]
+    }
+}
