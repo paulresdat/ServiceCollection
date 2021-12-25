@@ -25,7 +25,6 @@ def parse_args(sys_args=None):
     return args
 
 def main():
-    # test1()
     import os
     os.environ["TEST_SVC"] = "target1"
     ctxt = ConfigurationContext("tests/settings.json", overriden_target_context_os_env_name="TEST_SVC")

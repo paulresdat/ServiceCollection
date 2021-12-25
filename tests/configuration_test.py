@@ -89,7 +89,7 @@ class ConfigurationTests(unittest.TestCase):
             })
 
     def test_can_recursively_create_a_complex_configuration_object(self):
-        """ throough check for completely transformed nested objects """
+        """ deep check for completely transformed nested objects """
         sc = ServiceCollection(globals())
         ctxt = ConfigurationContext("tests/settings.json")
         sc.configure(FullRecursiveConfiguration, ctxt.file_as_dict)
