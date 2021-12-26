@@ -7,7 +7,7 @@ A simple python module that automates service dependencies using Python's new ty
 sc = ServiceCollection(globals())
 sc.singletons([MyFirstClass, MySecondClass])
 sp: ServiceProvider = sc.build_service_provider()
-myClass = sp.get_service(MyFirstClass)
+myClass: MyFirstClass = sp.get_service(MyFirstClass)
 
 myClass.doSomething()
 ```
@@ -53,7 +53,7 @@ Transients are objects that are instantiated upon resolution, so many instances 
 
 #### Configurations
 
-The configuration objects are transients in practice but are handled in a special way.  These objects in other service injection software are called "Options" or "Settings".  Basically, we can map static data to explicit objects.  This moves out of the realm of passing dictionary objects everywhere and pushes us more into the realm of passing explicitly defined objects everywhere.  A configuration object can look like this:
+The configuration objects are transients in practice but are handled in a special way.  These objects in other service injection software are called "Options" or "Settings".  Basically, we can map static data to explicit objects.  This moves out of the realm of passing dictionary objects everywhere and pushes us more into the realm of passing explicitly defined objects everywhere.  A configuration object may look like this:
 
 ```python
 class ConfigObject(object):
@@ -62,7 +62,22 @@ class ConfigObject(object):
     property_three: bool
 ```
 
-And 
+And it is possible to use getter and setter properties for configuration objects, however you MUST still define the property outside the `__init__` method.  This tells the service collection what to map to explicitly and is a requirement whether you have setters and private fields to define those properties internally.
+
+```python
+class ConfigObject(object):
+    property_one: str
+    def __init__(self):
+        self.__property_one: str = None
+
+    @property
+    def property_one(self):
+        return self.__property_one
+
+    @property_one.setter
+    def property_one(self, val: str):
+        self.__property_one = val
+```
 
 ## Anatomy of an App
 
