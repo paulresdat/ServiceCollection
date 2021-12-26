@@ -153,18 +153,23 @@ class CsvMaker(object):
 
 The important thing to note here, is that the `SqlConnection` object is a dependency in the constructor of `CsvMaker` and that it's type hint is explicitly stated in the constructor.  This is how the service collection library knows about the `SqlConnection` class as a dependency in `CsvMaker`.  The service collection library can automatically resolve this because it knows what that type is in the constructor of that class.  In fact, as long as the type is registered in the service collection, you can push that type into any class constructor you wish that is also registered in the service collection.  This makes dependency injection very easy in this library.
 
-Let us now inspect the `SqlConnection` object:
+Let us now inspect the `SqlConfig` configuration object and the `SqlConnection` service object:
 
 ```python
 # in utilities.py
+class SqlConfig(object):
+    username: str
+    password: str
+    database: str
+
 
 class SqlConnection(object):
     # here we are saying that the SqlConfig object is a dependency in the constructor of the SqlConnection object
     def __init__(self, sql_config: SqlConfig):
         self.__sql_config = sql_config
         self.__connection = self.__connect({
-            'username': sql_config.username
-            'password': sql_config.password
+            'username': sql_config.username,
+            'password': sql_config.password,
             ...
         })
 
@@ -173,7 +178,23 @@ class SqlConnection(object):
         ...
 ```
 
-The important thing to note here is the same principle is applied from the CsvMaker where the configuration object is a dependency in the constructor so that the service injection library can automatically resolve that for you.
+The important thing to note here is the same principle is applied from the CsvMaker where the configuration object is a dependency in the constructor so that the service injection library can automatically resolve that for you. Here we see an example that the values that are specified in `main.py` is what is registered with the `SqlConfig` object.  This is an example of centrally defining settings in one place that's then used throughout the application where it is asked for.  Using settings JSON files is described in more details below.
+
+### Notes on Design Principles
+
+We can see from the above example how the architecture of an app can look, and we've demonstrated some simple injection principles as well as a basic configuration class.  This approach can differ from how folks usually write Python applications.  Even though dependency injection and service resolution does exist in Python, one can tell they're applied in a different kind of way that allows for resolution, perhaps in already existing applications that may not previously had automatic dependency resolution.  In contrast, this library coerces us to look at the entire organization and design of your app from the ground up.
+
+Folks that script applications and do not think about the architecture of their app as much, sole programmer types, or folks that don't think too much about what other eyes may be looking at the code that they've written such as those who would be required to maintain the code of the original programmer, may find some concepts strict and verbose in code.  From personal experience, I've seen folks make heavy use of dictionaries (associative arrays in other languages) and pass them everywhere for settings values and JSON data because it's easy and quick to do.  Forcing a stricter approach to map dictionaries to explicit class properties may seem like more work than is necessary to some.  In this regard, this library may not be for them.  But I assure you, the benefits of maintaining code and reading code will be evident to you by adopting the design principles this library encourages.
+
+### Configurations and Settings
+
+In this section we will be discussing the different scanarios you may need to setup static configuration data that you will need to pass around in your application.  There are a few different ways of doing it, mostly for testing and injecting in mind.  However there is a recommended way of using static data for your application, and that's by using JSON files that are then transformed to objects in memory when the application starts.
+
+#### Injecting configuration values directly
+
+```python
+
+```
 
 ## Examples
 
