@@ -1,14 +1,19 @@
 from __future__ import annotations
 import asyncio
-from asyncio.tasks import Task
 import random
+from asyncio.tasks import Task
 from typing import TYPE_CHECKING, List
-from servicecollection import ConfigurationContext, ServiceCollection
+from servicecollection import ServiceCollection
 
 if TYPE_CHECKING:
     from src.service_collection.servicecollection import ServiceProvider
 
 
+# A little program that basically spins off threads with random wait times.
+# This demonstrates a basic service collection use case within the context
+# of a multithreaded application.  The service collection is agnostic to how
+# you write your program, as long as the resolution of the service happens
+# in the parent thread.
 class Spawner(object):
     def __init__(self):
         pass
@@ -18,7 +23,6 @@ class Spawner(object):
         print("Starting thread " + name + " - sleeping : " + str(rand))
         await asyncio.sleep(rand)
         print("Ending thread: " + name)
-        
 
 
 class MassiveSpawner(object):
@@ -47,7 +51,6 @@ async def main():
     sc.singletons([Spawner, MassiveSpawner])
     sp: ServiceProvider = sc.build_service_provider()
     ms: MassiveSpawner = sp.get_service(MassiveSpawner)
-
     # asynchronously spawns threads that print and sleep a random number of seconds
     await ms.spawn()
 
