@@ -1,7 +1,16 @@
 # Service Collection Factory for Python CLI Apps
 
-A simple python module that automates service dependencies using Python's new type hints.  This approach is inspired by automatic dependency resolution in statically typed languages.  This fancy factory pattern also encourages a stricter dependency resolution by only allowing automatic resolution through the approach of injecting the service through a class's constructor.
+A simple python module that automates service dependencies using Python's new type hints.  This approach is inspired by automatic dependency resolution in statically typed languages.
 
+
+```python
+sc = ServiceCollection(globals())
+sc.singletons([MyFirstClass, MySecondClass])
+sp: ServiceProvider = sc.build_service_provider()
+myClass = sp.get_service(MyFirstClass)
+
+myClass.doSomething()
+```
 
 ## Intended Audience
 
@@ -11,10 +20,11 @@ This package's primary audience is the creator for his own projects but if you k
 ## Features
 
 * Written with the express intent for ease of unit/integration testing
-* Supports json settings files
-* Supports settings transformations for multi-target deployment
+* Supports injecting settings using JSON files
+* Supports transformations for multi-target deployment
 * Fully automates injecting dependencies based on types
 * Written with the express intent to encourage clean architecture principles
+
 
 ## Installing
 
@@ -38,5 +48,24 @@ There are 3 main resolution types to be aware of, singletons, transients and con
 This pattern is very useful for high level objects like services and repositories.  If we had a repository design object that had a long running connection to a third party application, it would make sense to have one instance of that object in memory and return the same object to any service requesting it.  This allows for the application to share the same connection across its business logic classes.
 
 #### Transients
+
+Transients are objects that are instantiated upon resolution, so many instances of the object can exist in the lifetime of the app.  It is the opposite of the singleton design.  Every time it is asked for as a dependency a new object is created and provided.
+
+#### Configurations
+
+The configuration objects are transients in practice but are handled in a special way.  These objects in other service injection software are called "Options" or "Settings".  Basically, we can map static data to explicit objects.  This moves out of the realm of passing dictionary objects everywhere and pushes us more into the realm of passing explicitly defined objects everywhere.  A configuration object can look like this:
+
+```python
+class ConfigObject(object):
+    property_one: str
+    property_two: int
+    property_three: bool
+```
+
+And 
+
+## Anatomy of an App
+
+The fancy factory pattern of automatic resolution of dependencies in this library encourages a stricter dependency resolution by only allowing automatic resolution through the approach of injecting the service through a class's constructor.  In this beta version, there are no plans to use injection in any other fashion and there currently is no need to use any wrapper functions to help in the resolution of dependencies.  Let us go forth with examples to illustrate how to approach a new application with this library.
 
 ## Examples
