@@ -17,15 +17,15 @@ from servicecollection import ServiceCollection
 
 class ModelInterface(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls):
+    def __subclasshook__(cls, subclass):
         return (
-            hasattr(cls, 'set') and callable(cls.set) and
-            hasattr(cls, 'save') and callable(cls.save) and
-            hasattr(cls, 'json_load') and callable(cls.json_load) and
-            hasattr(cls, 'get_keys') and callable(cls.get_keys) and
-            hasattr(cls, 'get_values') and callable(cls.get_values) and 
-            hasattr(cls, 'get_table_name') and callable(cls.get_table_name) and
-            hasattr(cls, 'get_key_values') and callable(cls.get_key_values)
+            hasattr(subclass, 'set') and callable(subclass.set) and
+            hasattr(subclass, 'save') and callable(subclass.save) and
+            hasattr(subclass, 'json_load') and callable(subclass.json_load) and
+            hasattr(subclass, 'get_keys') and callable(subclass.get_keys) and
+            hasattr(subclass, 'get_values') and callable(subclass.get_values) and 
+            hasattr(subclass, 'get_table_name') and callable(subclass.get_table_name) and
+            hasattr(subclass, 'get_key_values') and callable(subclass.get_key_values)
             or NotImplemented
         )
 
@@ -83,8 +83,8 @@ class ISql(metaclass=ABCMeta):
     @classmethod
     def __subclasshook__(cls, subclass):
         return (
-            hasattr(cls, 'update') and callable(cls.update) and
-            hasattr(cls, 'sql') and callable(cls.sql)
+            hasattr(subclass, 'update') and callable(subclass.update) and
+            hasattr(subclass, 'sql') and callable(subclass.sql)
             or NotImplemented
         )
 
@@ -180,11 +180,11 @@ class ModelAbstract(ModelInterface):
 
 class ISuperModel(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls):
+    def __subclasshook__(cls, subclass):
         return (
-            hasattr(cls, 'id') and
-            hasattr(cls, 'name') and
-            hasattr(cls, 'data_model') or
+            hasattr(subclass, 'id') and
+            hasattr(subclass, 'name') and
+            hasattr(subclass, 'data_model') or
             NotImplemented
         )
 
@@ -238,7 +238,7 @@ class IModelRepository(metaclass=ABCMeta):
     @classmethod
     def __subclasshook__(cls, subclass):
         return (
-            hasattr(cls, 'make_model') and callable(cls.make_model)
+            hasattr(subclass, 'make_model') and callable(subclass.make_model)
             or NotImplemented
         )
 
