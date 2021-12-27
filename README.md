@@ -90,7 +90,7 @@ class ConfigObject(object):
 
 ## Anatomy of an App
 
-The fancy factory pattern of automatic resolution of dependencies in this library encourages a stricter dependency resolution by allowing automatic resolution only through the approach of injecting the service through a class's constructor.  In this beta version, there are no plans to use injection in any other fashion and there currently is no need to use any wrapper functions to help in the resolution of dependencies.  This forces us to think about an app almost entirely as a collection of classes in modules rather than a collection of methods and or classes in a monolithic file.  Let us go forth with examples to illustrate how to approach a new application with this library.  Please note some implementation details of objects may be omitted because the following is only used as illustrations of the concept.  In "Examples", you will find working code in practice.
+This fancy factory pattern of automatic resolution of dependencies encourages a stricter dependency resolution by allowing automatic resolution only through the approach of injecting the service through a class's constructor.  In this beta version, there are no plans to use injection in any other fashion and there currently is no need to use any wrapper functions to help in the resolution of dependencies.  This forces us to think about an app almost entirely as a collection of classes in modules rather than a collection of methods and or classes in a monolithic file.  Let us go forth with examples to illustrate how to approach a new application with this library.  Please note some implementation details of objects may be omitted because the following is only used as illustrations of the concept.  In "Examples", you will find working code in practice.
 
 ### Basic Structure
 
@@ -120,6 +120,7 @@ if TYPE_CHECKING:
     # directly, so only import for type checking resolution.
     from servicecollection import ServiceProvider
 
+
 def main():
     # we must define the service collection and pass all defined imports and
     # variables from the `globals()` of this document.
@@ -139,6 +140,10 @@ def main():
     csv: CsvMaker = sp.get_service(CsvMaker)
     # run the job
     csv.get_daily_totals("daily-totals.csv")
+
+
+if __name__ == '__main__':
+    main()
 ```
 
 From this example we can infer a few things.  We see 3 classes: `CsvMaker`, `SqlConnection`, and `SqlConfig`.  We can see that there is only one place of entry: `CsvMaker`.  We can also infer that the `SqlConnection` object may be a dependency of `CsvMaker`.  `SqlConfig` object we don't know for sure from just this example where that object is being used, but we can infer from the variable name that it's likely used in the `SqlConnection` object.  So we have a rough idea of what's going on, let us look at what the CsvMaker might entail:
@@ -158,7 +163,7 @@ class CsvMaker(object):
         self.__save_file(filename, totals)
 ```
 
-The important thing to note here, is that the `SqlConnection` object is a dependency in the constructor of `CsvMaker` and that it's type hint is explicitly stated in the constructor.  This is how the service collection library knows about the `SqlConnection` class as a dependency in `CsvMaker`.  The service collection library can automatically resolve this because it knows what that type is in the constructor of that class.  In fact, as long as the type is registered in the service collection, you can push that type into any class constructor you wish that is also registered in the service collection.  This makes dependency injection very easy in this library.
+The important thing to note here is that the `SqlConnection` object is a dependency in the constructor of `CsvMaker` and that its type hint is explicitly stated in the constructor.  This is how the service collection library knows about the `SqlConnection` class as a dependency in `CsvMaker`.  The service collection library can automatically resolve this because it knows what that type is in the constructor of that class.  In fact, as long as the type is registered in the service collection, you can push that type into any class constructor you wish that is also registered in the service collection.  This makes dependency injection very easy in this library.
 
 Let us now inspect the `SqlConfig` configuration object and the `SqlConnection` service object:
 
