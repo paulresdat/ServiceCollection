@@ -6,7 +6,7 @@ import json
 import os
 import enum
 from argparse import Namespace
-from typing import List, Union
+from typing import Any, Callable, List, Union
 
 
 class ConfigurationSection(object):
@@ -222,29 +222,60 @@ class ServiceCollection(object):
         for x in t:
             self.singleton(x)
 
-    def singleton(self, t, arg_types=[]):
-        if inspect.isclass(t):
-            if callable(arg_types) and arg_types.__name__ == '<lambda>':
-                # a registered singleton is passed through from a lambda function
-                # register it as fully formed
-                self.__fully_registered[t.__name__] = {
-                    'type': 'singleton',
-                    'instance': arg_types()
-                }
-            else:
-                # else, it's a bread and butter singleton registration
-                c_type = str(t.__name__)
-                args = self.__prepare_constructor_args(t, arg_types)
+    def singleton(self,
+                  tinterface: type,
+                  tconcrete: type = None,
+                  instance: Any = None,
+                  constructor_args: Union[list, tuple] = []):
+        if inspect.isclass(tinterface):
+            # the first way is where everything after the tinterface is None, mapping a concrete explicitly
+            c_type = str(tinterface.__name__)
+            if tconcrete is None and instance is None:
+                args = self.__prepare_constructor_args(tinterface, constructor_args)
                 self.__service_collection[c_type] = {
                     'type': 'singleton',
-                    'instance_type': t,
+                    'instance_type': tinterface,
                     'constructor_args': args
                 }
-        else:
+            # the next way is to map from an interface to a concrete
+            elif tconcrete is not None and inspect.isclass(tconcrete) and instance is None:
+                if issubclass(tconcrete, tinterface):
+                    args = self.__prepare_constructor_args(tconcrete, constructor_args)
+                    self.__service_collection[c_type] = {
+                        'type': 'singleton',
+                        'instance_type': tconcrete,
+                        'constructor_args': args
+                    }
+                else:
+                    raise RuntimeError((
+                        "The concrete type specified is not a subclass of the interface.  " + 
+                        "Please consult documentation on abstract/interface design in python.  Examples exist for this github repo."))
+            elif instance is not None:
+                if isinstance(instance, tinterface):
+                    args = self.__prepare_constructor_args((tconcrete if tconcrete is not None else tinterface), constructor_args)
+                    self.__fully_registered[c_type] = {
+                        'type': 'singleton',
+                        'instance': instance,
+                        'constructor_args': args
+                    }
+                elif callable(instance) and instance.__name__ == '<lambda>':
+                    # here we are expecting the instance in a lambda function
+                    # TODO - analysis on whether an instance check should be performed
+                    # on the return object.  I'm thinking not at this time, but may
+                    # be desired to be more restrictive
+                    self.__fully_registered[c_type] = {
+                        'type': 'singleton',
+                        'instance': instance()
+                    }
+                else:
+                    raise RuntimeError('Uknown instance type supplied: expecting either an instance of the interface or a lambda')
+            else:
+                raise RuntimeError('Unknown configuration found for registering a singleton')
+        elif type(tinterface) is not type:
             # we have already created instance, just register directly
-            self.__fully_registered[t.__name__] = {
+            self.__fully_registered[tinterface.__name__] = {
                 'type': 'singleton',
-                'instance': t,
+                'instance': tinterface,
             }
             return
 
@@ -252,24 +283,36 @@ class ServiceCollection(object):
         for x in t:
             self.transient(x)
 
-    def transient(self, t, arg_types=[]):
-        if inspect.isclass(t):
-            c_type = str(t.__name__)
-            if callable(arg_types) and arg_types.__name__ == '<lambda>':
-                # a registered transient is passed through from a lambda function
-                # register it as lambda called each time the service is fetched
+    def transient(self, tinterface: type, tconcrete: type = None, construction: Union[list, tuple, Callable] = None):
+        if inspect.isclass(tinterface):
+            c_type = str(tinterface.__name__)
+            if inspect.isclass(tconcrete) and construction is not None:
+                if callable(construction) and construction.__name__ == '<lambda>':
+                    # a registered transient is passed through from a lambda function
+                    # register it as lambda called each time the service is fetched
+                    self.__service_collection[c_type] = {
+                        'type': 'transient',
+                        'instance_type': tconcrete,
+                        'constructor_args': [],
+                        'lambda': construction,
+                    }
+                else:
+                    # TODO - finish this
+                    raise RuntimeError('Unknown configuration for concrete type at this time')
+            elif inspect.isclass(tconcrete):
+                args = self.__prepare_constructor_args(tconcrete, construction)
                 self.__service_collection[c_type] = {
                     'type': 'transient',
-                    'instance_type': t,
-                    'constructor_args': [],
-                    'lambda': arg_types,
+                    'instance_type': tconcrete,
+                    'constructor_args': args,
+                    'lambda': False,
                 }
             else:
                 # otherwise it's a bread and butter transient registration
-                args = self.__prepare_constructor_args(t, arg_types)
+                args = self.__prepare_constructor_args(tinterface, construction)
                 self.__service_collection[c_type] = {
                     'type': 'transient',
-                    'instance_type': t,
+                    'instance_type': tinterface,
                     'constructor_args': args,
                     'lambda': False,
                 }

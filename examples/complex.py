@@ -17,16 +17,15 @@ from servicecollection import ServiceCollection
 
 class ModelInterface(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls):
         return (
-            hasattr(subclass, 'set') and callable(subclass.set) and
-            hasattr(subclass, 'save') and callable(subclass.save) and
-            hasattr(subclass, 'json_load') and callable(subclass.json_load) and
-            # hasattr(subclass, 'dict_load') and callable(subclass.dict_load) and
-            hasattr(subclass, 'get_keys') and callable(subclass.get_keys) and
-            hasattr(subclass, 'get_values') and callable(subclass.get_values) and 
-            hasattr(subclass, 'get_table_name') and callable(subclass.get_table_name) and
-            hasattr(subclass, 'get_key_values') and callable(subclass.get_key_values)
+            hasattr(cls, 'set') and callable(cls.set) and
+            hasattr(cls, 'save') and callable(cls.save) and
+            hasattr(cls, 'json_load') and callable(cls.json_load) and
+            hasattr(cls, 'get_keys') and callable(cls.get_keys) and
+            hasattr(cls, 'get_values') and callable(cls.get_values) and 
+            hasattr(cls, 'get_table_name') and callable(cls.get_table_name) and
+            hasattr(cls, 'get_key_values') and callable(cls.get_key_values)
             or NotImplemented
         )
 
@@ -40,7 +39,7 @@ class ModelInterface(metaclass=ABCMeta):
         raise NotImplemented
 
     @abstractmethod
-    def save(self, sql: ISqlInterface):
+    def save(self, sql: ISql):
         """ save loaded data """
         raise NotImplemented
 
@@ -80,33 +79,33 @@ class ModelInterface(metaclass=ABCMeta):
         raise NotImplemented
 
 
-class ISqlInterface(metaclass=ABCMeta):
+class ISql(metaclass=ABCMeta):
     @classmethod
     def __subclasshook__(cls, subclass):
         return (
-            hasattr(subclass, 'update') and callable(subclass.update) and
-            hasattr(subclass, 'sql') and callable(subclass.sql)
+            hasattr(cls, 'update') and callable(cls.update) and
+            hasattr(cls, 'sql') and callable(cls.sql)
             or NotImplemented
         )
 
     @abstractmethod
-    def insert(self, model: ModelAbstract) -> ISqlInterface:
+    def insert(self, model: ModelAbstract) -> ISql:
         raise NotImplemented
 
     @abstractmethod
-    def update(self, model: ModelAbstract) -> ISqlInterface:
+    def update(self, model: ModelAbstract) -> ISql:
         raise NotImplemented
 
     @abstractmethod
     def sql(self) -> str:
         raise NotImplemented
 
-class Sql(ISqlInterface):
+class Sql(ISql):
     def __init__(self):
         """ FAKE SQL Object"""
         pass
 
-    def insert(self, model: ModelAbstract) -> ISqlInterface:
+    def insert(self, model: ModelAbstract) -> ISql:
         identity = model.get_identity_key()
         keys = []
         vals = []
@@ -121,7 +120,7 @@ class Sql(ISqlInterface):
         
         return self
 
-    def update(self, model: ModelAbstract) -> ISqlInterface:
+    def update(self, model: ModelAbstract) -> ISql:
         key_values: dict = model.get_key_values()
         self.__sql = "UPDATE " + model.get_table_name() + " SET "
         vals = []
@@ -149,7 +148,7 @@ class ModelAbstract(ModelInterface):
     def get(self, key: str):
         return self.__key_values[key]
 
-    def save(self, sql: ISqlInterface) -> int:
+    def save(self, sql: ISql) -> int:
         if self.__key_values[self.__identity_column_name] is None:
             sql = sql.insert(self).sql()
         else:
@@ -181,11 +180,11 @@ class ModelAbstract(ModelInterface):
 
 class ISuperModel(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls):
         return (
-            hasattr(subclass, 'id') and
-            hasattr(subclass, 'name') and
-            hasattr(subclass, 'data_model') or
+            hasattr(cls, 'id') and
+            hasattr(cls, 'name') and
+            hasattr(cls, 'data_model') or
             NotImplemented
         )
 
@@ -235,19 +234,35 @@ class SuperModel(ModelAbstract, ISuperModel):
         return self.set('DataModel', model)
 
 
+class IModelRepository(metaclass=ABCMeta):
+    @classmethod
+    def __subclasshook__(cls, subclass):
+        return (
+            hasattr(cls, 'make_model') and callable(cls.make_model)
+            or NotImplemented
+        )
+
+    @abstractmethod
+    def make_model(self):
+        raise NotImplemented
+
+
+class ModelRepository(IModelRepository):
+    def __init__(self, sql: ISql):
+        self.__sql = sql
+
+    def make_model(self):
+        model = SuperModel()
+        model.save(self.__sql)
 
 def main():
-    # TODO - add Interface in place of Concrete for fetching
     sc = ServiceCollection(globals())
-    sc.transient(SuperModel)
-    sc.singleton(Sql)
+    sc.singleton(IModelRepository, ModelRepository)
+    sc.singleton(ISql, Sql)
     sp = sc.build_service_provider()
-    sql = sp.get_service(Sql)
-    
-    new_super_model: SuperModel = sp.get_service(SuperModel)
-    # s.id = 1
-    new_super_model.name = "hi"
-    new_super_model.save(sql)
+    repo: IModelRepository = sp.get_service(IModelRepository)
+    print(isinstance(repo, IModelRepository))
+    repo.make_model()
 
 
 if __name__ == '__main__':
