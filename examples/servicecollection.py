@@ -440,6 +440,6 @@ class ServiceProvider(object):
         self.__service_collection = service_collection
         pass
 
-    def get_service(self, class_type):
+    def get_service(self, class_type: type):
         class_name = class_type.__name__
         return self.__service_collection.fetch_service(class_name)
