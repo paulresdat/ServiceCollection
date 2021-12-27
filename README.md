@@ -223,8 +223,8 @@ class ConfigObject(object):
     property_two: bool
 
 parser = argparse.ArgumentParser(description='Argument parsing for configuration tests')
-parser.add_argument('--property_one', type=str, help='Property one as a string')
-parser.add_argument('--property_two', type=bool, action='store_true', help='Property two as a boolean value')
+parser.add_argument('--property-one', type=str, help='Property one as a string')
+parser.add_argument('--property-two', type=bool, action='store_true', help='Property two as a boolean value')
 args = parser.parse_args(sys_args if sys_args else ['--help'])
 
 sc = ServiceCollection(globals())
@@ -360,15 +360,15 @@ class CustomConfigurationContext(ConfigurationContext):
         super().__init__(filename, target, overridden_env_name)
 
     @property
-    def db_configurations(self) -> ConfigurationContextSection:
+    def db_configurations(self) -> ConfigurationSection:
         return self.section("sql_configurations:db_connections")
 
     @property
-    def sql_log_configurations(self) -> ConfigurationContextSection:
+    def sql_log_configurations(self) -> ConfigurationSection:
         return self.section("sql_configurations:sql_log")
 
     @property
-    def chat_configurations(self) -> ConfigurationContextSection:
+    def chat_configurations(self) -> ConfigurationSection:
         return self.section("chat_configurations")
 
 
@@ -430,12 +430,84 @@ class TestingRepo(unittest.TestCase):
 
 ## Examples
 
+Examples can be found in the `examples` folder in this github repository.
 
 ## Important Notes
 
-### Adding ServiceCollection to an existing library
+### Adding ServiceCollection to an existing application
+
+You can try and add this library to an existing project.  Depending on the architecture, you may need to slowly migrate over to a new central service provider.  If that's not an option, then you would need to do a rewrite.  With many python scripting apps, slowly migrating may not be an option because the paradigm is very different for implementation using a service provider than how the older app was written.  In such cases it may be the case this library just isn't what's needed for the application in question.  Also, this library is intended for use in later Python versions, this may also be a barrier depending on the target machine that the app resides and whether there are administrative hurtles to update the Python version on the target machine.
+
+Another issue is that this library is intended specifically for command line applications.  There is no support for any of the Python frameworks.  It is completely possible to work with this service provider in the context of a framework, given you know how to wield the framework, but you do run the risk of introducing anti-patterns.
+
+
+### Avoiding Anti-Patterns
+
+With a service provider, you run the risk of introducing anti-patterns if you try and inject the service provider itself into the architecture of the application.  This is a "single point of origin" service provider that only needs to be instantiated once in the top most layer of the application, call the main entry class (or service) and begin the app.  Moving away from this pattern, you run the risk of breaking the paradigm and injecting anti-patterns.  More information on anti-patterns can be found <a href="https://blog.ploeh.dk/2010/02/03/ServiceLocatorisanAnti-Pattern/">here</a>.
+
+*VERY VERY BAD:*
+
+```python
+class ServiceB(object):
+    def __init__(self):
+        self.__name = "service b"
+
+    @property
+    def service_name(self):
+        return self.__name
+
+class ServiceA(object):
+    def __init__(self, service_provider: ServiceProvider):
+        self.__sp = service_provider
+
+    def get_name(self):
+        service_b = self.__sp.get_service(ServiceB)
+        return service_b.service_name
+
+sc = ServiceCollection(globals)
+sc.singletons([ServiceA, ServiceB])
+sp: ServiceProvider sc.build_service_provider()
+# BAD, never do this, this is just bad design
+sc.singleton(ServiceProvider, lambda: sp)
+new_sp: ServiceProvider = sc.build_service_provider()
+
+s = new_sp.get_service(ServiceA)
+# BAD
+s.get_name()
+```
+
+This an example of bad design.  The service provider is NEVER a dependency in another object.  This should be avoided because it's bad code and bad design.  It's an anti-pattern and will do weird things.  Just avoid that.
+
+*VERY VERY GOOD*
+
+```python
+class ServiceB(object):
+    def __init__(self):
+        self.__name = "service b"
+
+    @property
+    def service_name(self):
+        return self.__name
+
+class ServiceA(object):
+    def __init__(self, service_b: ServiceB):
+        self.__service_b = service_provider
+
+    def get_name(self):
+        return self.__service_b.service_name
+
+sc = ServiceCollection(globals)
+sc.singletons([ServiceA, ServiceB])
+sp: ServiceProvider sc.build_service_provider()
+s = sp.get_service(ServiceA)
+s.get_name()
+```
+
+The above code of course illustrates what is shown throughout the documentation.  Services are dependencies of each other, and at the top most layer of the application, the service provider is built and then the single point of entry class is fetched and served.
+
 
 ### Globals
 
+It is a requirement to always pass `globals()` when instantiating a new `ServiceCollection` as illustrated from the many examples provided in this document.  `globals()` returns a symbol table that is required for the `ServiceCollection` to correctly resolve dependencies based on their type.
 
-### Type Hinting Resolution
+Please note, this is by design.  At this time, there are no plans to change this.  If you feel there's a reason to change it or to update this functionality, please open an issue in the issue tracker to discuss.
