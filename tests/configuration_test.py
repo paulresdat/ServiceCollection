@@ -123,3 +123,49 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(fc.complex_object.value2, 1)
         self.assertListEqual(fc.complex_object.value3, [6, 7, 8, 9, 10])
 
+    def test_can_recusrively_create_a_complex_configuration_object_with_context_object(self):
+        sc = ServiceCollection(globals())
+        ctxt = ConfigurationContext("tests/settings.json")
+        sc.configure(FullRecursiveConfiguration, ctxt)
+        sp: ServiceProvider = sc.build_service_provider()
+        fc: FullRecursiveConfiguration = sp.get_service(FullRecursiveConfiguration)
+
+        self.assertEqual(type(fc.complex_object), ComplexObjectConfig)
+        self.assertEqual(type(fc.complex_object.complex1), ComplexOneConfig)
+        self.assertEqual(type(fc.complex), ComplexConfig)
+        self.assertEqual(type(fc.name), str)
+        
+        self.assertEqual(fc.name, "hello")
+        self.assertEqual(fc.complex.name, "hello2")
+        self.assertEqual(fc.complex_object.complex1.term1, "one")
+        self.assertEqual(fc.complex_object.complex1.term2, "two")
+        self.assertEqual(fc.complex_object.value1, True)
+        self.assertEqual(fc.complex_object.value2, 1)
+        self.assertListEqual(fc.complex_object.value3, [1, 2, 3, 4])
+
+    def test_can_use_sections_populate_configuration_objects(self):
+        sc = ServiceCollection(globals())
+        ctxt = ConfigurationContext("tests/settings.json")
+        sc.configure(ComplexOneConfig, ctxt.get_section("complex_object:complex1"))
+        sp: ServiceProvider = sc.build_service_provider()
+        conf: ComplexOneConfig = sp.get_service(ComplexOneConfig)
+        self.assertEqual(conf.term1, "one")
+        self.assertEqual(conf.term2, "two")
+
+    def test_can_use_custom_contexts_to_map_configuration_objects(self):
+        class CustomConfigurationContext(ConfigurationContext):
+            def __init__(self, file: str, target: str = None, override_evn_name: str = None):
+                super().__init__(file, target, override_evn_name)
+            
+            @property
+            def complex_one_conf(self):
+                return self.get_section("complex_object:complex1")
+
+        sc = ServiceCollection(globals())
+        ctxt = CustomConfigurationContext("tests/settings.json")
+        sc.configure(ComplexOneConfig, ctxt.complex_one_conf)
+        sp: ServiceProvider = sc.build_service_provider()
+        conf: ComplexOneConfig = sp.get_service(ComplexOneConfig)
+        self.assertEqual(conf.term1, "one")
+        self.assertEqual(conf.term2, "two")        
+        

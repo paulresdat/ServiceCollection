@@ -15,7 +15,7 @@ myClass.doSomething()
 
 ## Intended Audience
 
-This package's primary audience is the creator for his own projects but if you know a little about dependency injection and clean architecture, this approach should be easy to understand.  If you're a Python beginner, this approach should be coupled with some reading on clean architecture and dependency injection.  It is expected that you will eventually pick up a book on the of topic software architecture.  If you're coming from a C# background, this should be rather strikingly similar to you and you should be able to start working with it immediately regardless of your Python experience.  This library's intended use is for larger maintainable python applications or cron jobs that potentially more than one person would touch.
+This package's primary audience is the creator for his own projects but if you know a little about dependency injection and clean architecture, this approach should be easy to understand.  If you're a Python beginner, this approach should be coupled with some reading on clean architecture and dependency injection.  It is expected that you will eventually pick up a book on the topic of software architecture.  If you're coming from a C# background, this should be strikingly similar to you and you should be able to start working with it immediately regardless of your Python experience.  This library's intended use is for larger maintainable python applications or cron jobs that would have more than one person actively developing and maintaining.
 
 
 ## Features
@@ -40,7 +40,14 @@ Automatic service injection by reflection in statically typed languages have bee
 
 ### Singletons, Transients and Configurations
 
-There are 3 main resolution types to be aware of, singletons, transients and configuration objects.
+There are 3 main resolution types to be aware of: singletons, transients and configuration objects.
+
+```python
+sc = ServiceCollection(globals())
+sc.singleton(SingletonClass)
+sc.transient(TransientClass)
+sc.configure(ConfigurationClass, {})
+```
 
 #### Singletons
 
@@ -83,7 +90,7 @@ class ConfigObject(object):
 
 ## Anatomy of an App
 
-The fancy factory pattern of automatic resolution of dependencies in this library encourages a stricter dependency resolution by allowing automatic resolution only through the approach of injecting the service through a class's constructor.  In this beta version, there are no plans to use injection in any other fashion and there currently is no need to use any wrapper functions to help in the resolution of dependencies.  Let us go forth with examples to illustrate how to approach a new application with this library.  Please note some implementation details of objects may be omitted because the following is only used as illustrations of the concept.  In "Examples", you will find working code in practice.
+The fancy factory pattern of automatic resolution of dependencies in this library encourages a stricter dependency resolution by allowing automatic resolution only through the approach of injecting the service through a class's constructor.  In this beta version, there are no plans to use injection in any other fashion and there currently is no need to use any wrapper functions to help in the resolution of dependencies.  This forces us to think about an app almost entirely as a collection of classes in modules rather than a collection of methods and or classes in a monolithic file.  Let us go forth with examples to illustrate how to approach a new application with this library.  Please note some implementation details of objects may be omitted because the following is only used as illustrations of the concept.  In "Examples", you will find working code in practice.
 
 ### Basic Structure
 
@@ -184,22 +191,251 @@ The important thing to note here is the same principle is applied from the CsvMa
 
 We can see from the above example how the architecture of an app can look, and we've demonstrated some simple injection principles as well as a basic configuration class.  This approach can differ from how folks usually write Python applications.  Even though dependency injection and service resolution does exist in Python, one can tell they're applied in a different kind of way that allows for resolution, perhaps in already existing applications that may not previously had automatic dependency resolution.  In contrast, this library coerces us to look at the entire organization and design of your app from the ground up.
 
-Folks that script applications and do not think about the architecture of their app as much, sole programmer types, or folks that don't think too much about what other eyes may be looking at the code that they've written such as those who would be required to maintain the code of the original programmer, may find some concepts strict and verbose in code.  From personal experience, I've seen folks make heavy use of dictionaries (associative arrays in other languages) and pass them everywhere for settings values and JSON data because it's easy and quick to do.  Forcing a stricter approach to map dictionaries to explicit class properties may seem like more work than is necessary to some.  In this regard, this library may not be for them.  But I assure you, the benefits of maintaining code and reading code will be evident to you by adopting the design principles this library encourages.
+Folks that script applications and do not think about the architecture of their app as much, sole programmer types, or folks that don't think too much about what other eyes may be looking at the code that they've written such as those who would be required to maintain the code of the original programmer, may find some concepts strict and verbose in code.  As an example, I've seen folks make heavy use of dictionaries (associative arrays in other languages) and pass them everywhere for settings values and JSON data.  It's not a bad way, and it's easy and quick to do.  However, forcing a stricter approach to map dictionaries to explicit class properties may seem like more work than is necessary to some of these folks.  In this regard, this library may not be for them.  But I assure you, the benefits of maintaining code and reading code will be evident to you by adopting the design principles this library encourages.
 
 ### Configurations and Settings
 
-In this section we will be discussing the different scanarios you may need to setup static configuration data that you will need to pass around in your application.  There are a few different ways of doing it, mostly for testing and injecting in mind.  However there is a recommended way of using static data for your application, and that's by using JSON files that are then transformed to objects in memory when the application starts.
+In this section we will be discussing the different scanarios you may need to setup static configuration data that you will need to pass around in your application.  There are 3 main ways of doing it, one way being an explicit approach for testing.  However there is a recommended way of using static data for your application, and that's by using JSON files that are then transformed to objects in memory when the application starts.  Below are the examples of 3 main ways you use configurations.
 
-#### Injecting configuration values directly
+#### Configurations and Dictionaries
 
 ```python
+class ConfigObject(object):
+    property_one: str
+    property_two: str
 
+sc.configure(ConfigObject, {
+    'property_one': 'one',
+    'property_two': 'two',
+})
+```
+
+This is the simplest example of the use of configurations: a direct dictionary is given and is mapped to the type on service resolution.  This is particularly handy when testing your app with values you need specifically in a testing environment.  It's also for a shortcut in a small app where you may not need JSON transformation files for targeting multiple environments.
+
+
+#### Configurations and Argparse
+
+```python
+import argparse
+
+class ConfigObject(object):
+    property_one: str
+    property_two: bool
+
+parser = argparse.ArgumentParser(description='Argument parsing for configuration tests')
+parser.add_argument('--property_one', type=str, help='Property one as a string')
+parser.add_argument('--property_two', type=bool, action='store_true', help='Property two as a boolean value')
+args = parser.parse_args(sys_args if sys_args else ['--help'])
+
+sc = ServiceCollection(globals())
+sc.configure(ConfigObject, args)
+```
+
+Argparse is a great library offered to you out of the box with python.  It automates command line argument parsing with some nice value adds like automatic boolean assignment and default values.  This library endeavours for first class support in mapping argparse to configuration objects.  The argparse.Namespace lacks in intellisense and lookup of your variable names.  Using configuration objects can be more readable in the long run and allows for us to utilize our IDE's intellisense for variable resolution and auto typing.  For more information on Argparse, you can consult the Python documentation.
+
+
+#### Configurations and JSON files
+
+*Example 1:*
+
+> settings.json
+```json
+{
+    "property_one": "one",
+    "property_two": true
+}
+```
+
+> main.py
+```python
+
+class ConfigObject(object):
+    property_one: str
+    property_two: bool
+
+sc = ServiceCollection(globals())
+ctxt = ConfigurationContext("settings.json")
+sc.configure(ConfigObject, ctxt)
+```
+
+This is the simplest example where we simply provide the entire context to the configure method.  This basically maps the entire file to that one object.
+
+
+*Example 2:*
+
+> settings.json
+```json
+{
+    "sql_configurations": {
+        "db_connections": {
+            "username": "sa",
+            "password": "Password123",
+            "database": "sysdb"
+        },
+        "sql_log": {
+            "property_one": "one"
+        }
+    },
+    "chat_configurations": {
+        "long_running": true
+    }
+}
+```
+
+> main.py
+```python
+class DbConnectionConfig(object):
+    username: str
+    password: str
+    database: str
+
+class SqlLogConfig(object):
+    property_one: str
+
+class ChatConfig(object):
+    long_running: bool
+
+sc = ServiceCollection(globals())
+ctxt = ConfigurationContext("settings.json")
+sc.configure(DbConnectionConfig, ctxt.section("sql_configurations:db_connections"))
+sc.configure(SqlLogConfig, ctxt.section("sql_configurations:sql_log"))
+sc.configure(ChatConfig, ctxt.section("chat_configurations"))
+```
+
+This example illustrates the ability to section off a settings file into different areas of concern.  This allows us to slice up the settings into different configuration objecst that are used in different areas of the application.  This helps enforce separation of concern in our configurations.
+
+
+*Example 3 (custom context object, the most explicit):*
+
+> settings.json
+```json
+{
+    "sql_configurations": {
+        "db_connections": {
+            "username": "sa",
+            "password": "Password123",
+            "database": "sysdb"
+        },
+        "sql_log": {
+            "property_one": "one"
+        }
+    },
+    "chat_configurations": {
+        "long_running": true,
+        "amqp_conn": {
+            "username": "sa",
+            "password": "Password123",
+            "queue": "queue-a",
+            "ip": "127.0.0.1",
+            "port": 5672
+        }
+    }
+}
+```
+
+> main.py
+```python
+class DbConnectionConfig(object):
+    username: str
+    password: str
+    database: str
+
+class SqlLogConfig(object):
+    property_one: str
+
+class AmqpConnConfig(object):
+    username: str
+    password: str
+    queue: str
+    ip: str
+    port: int
+
+class ChatConfig(object):
+    long_running: bool
+    # embedded complex objects are supported and are automatically mapped
+    amqp_conn: AmqpConnConfig
+
+class CustomConfigurationContext(ConfigurationContext):
+    def __init__(self, filename: str, target: str = None, overridden_env_name: str = None):
+        super().__init__(filename, target, overridden_env_name)
+
+    @property
+    def db_configurations(self) -> ConfigurationContextSection:
+        return self.section("sql_configurations:db_connections")
+
+    @property
+    def sql_log_configurations(self) -> ConfigurationContextSection:
+        return self.section("sql_configurations:sql_log")
+
+    @property
+    def chat_configurations(self) -> ConfigurationContextSection:
+        return self.section("chat_configurations")
+
+
+sc = ServiceCollection(globals())
+ctxt = CustomConfigurationContext("settings.json")
+sc.configure(DbConnectionConfig, ctxt.db_configurations)
+sc.configure(SqlLogConfig, ctxt.sql_log_configurations)
+sc.configure(ChatConfig, ctxt.chat_configurations)
+```
+
+This exmample illustrates the possibility and recommended way of extending the configuration context class so that configuration sections are exposed to the service collection as properties of the context object itself.  This allows for the best readability of the configuration maping.  For a larger application this example would be the recommended way of bootstrapping your configurations.
+
+
+## Unit/Integration Testing
+
+One of the highlights of using dependency injection is its inversion of dependency paradigm allows us to push mocked dependencies that have pre defined values in a testing context.  This decoupling of internal code to injected instances allows us to test our code in a modular fashion.  Coupled code is notoriously more difficult to test.
+
+This library's goal is to have an easy interface for mocking and testing when setting up your dependencies.  The 2 libraries that have been used with the service collection are `pytest` and `unittest`.  Concievably, this library should work with any testing framework.
+
+There's nothing stopping you from setting up your services independently of each other in each method in a testing framework, however the downside is that there is a consierably more verbose boiler plate code in your tests to maintain.  We propose that you use a central service dependency method that registers your services and mocks that your entire file uses.  For instance, if you have a unit tests around the repository, we recommend having them all in the same file and where you may only need one method to return the service provider with the methods registered.  This keeps your code cleaner and less verbose.
+
+```python
+# in a unittest file
+class TestingRepo(unittest.TestCase):
+    # if you just need the service provider without custom mocking for each test
+    def setUp(self):
+        sc = ServiceCollection(globals())
+        sc.addsingletons([ClassA, ClassB])
+        self.__sp = sc.build_service_provider()
+
+    def test_when_something_happens(self):
+        classA: ClassA = self.__sp.get_service(ClassA)
+        .. do your test ..
+```
+
+Or you can create a private method for getting the service provider:
+
+```python
+# in a unittest file
+class TestingRepo(unittest.TestCase):
+    def test_when_something_happens():
+        sp = self.__get_sp(True)
+        sql_conn = sp.get_service(SqlConnection)
+        self.assertTrue(sql_conn.connect())
+
+    def __get_sp(self, mock_sql_conn: False) -> ServiceProvider:
+        sc = ServiceCollection(globals())
+        # allowing a central point for the service provider while allowing
+        # for some conditionals that can change by test
+        if mock_sql_conn:
+            sql_conn = SqlConnection()
+            sql_conn.connect = MagicMock(return_value=True)
+            sc.singleton(SqlConnection, lambda: sql_conn)
+        else:
+            sc.singleton(SqlConnection)
+
+        return sc.build_service_provider()
 ```
 
 ## Examples
 
+
 ## Important Notes
 
+### Adding ServiceCollection to an existing library
+
 ### Globals
+
 
 ### Type Hinting Resolution

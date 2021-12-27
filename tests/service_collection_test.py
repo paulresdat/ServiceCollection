@@ -44,7 +44,6 @@ class TestServiceCollection(unittest.TestCase):
         sc.transients([TransientA, TransientB])
         sp: ServiceProvider = sc.build_service_provider()
         self.sp = sp
-        
 
     def test_that_singletons_are_available_in_the_service_provider(self):
         a: A = self.sp.get_service(A)

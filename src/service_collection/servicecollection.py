@@ -10,8 +10,12 @@ from typing import List, Union
 
 
 class ConfigurationSection(object):
-    def __init__(self):
-        pass
+    def __init__(self, settings_as_dict: dict):
+        self.__settings = settings_as_dict
+
+    @property
+    def settings(self):
+        return self.__settings
 
 
 class ServiceCollectionConst(enum.Enum):
@@ -39,7 +43,7 @@ class ConfigurationContext(object):
         self.__target_context_os_env = environment_variable_name
         self.__target_context = os.getenv(self.__target_context_os_env)
 
-    def get_section(self, section: str):
+    def get_section(self, section: str) -> ConfigurationSection:
         args = section.split(":")
         current_pos = self.file_as_dict
         for a in args:
@@ -48,8 +52,7 @@ class ConfigurationContext(object):
                 current_pos = current_pos[a]
             else:
                 return None
-        return current_pos
-
+        return ConfigurationSection(current_pos)
 
     @property
     def file_as_dict(self) -> Union[dict,None]:
@@ -86,16 +89,18 @@ class ConfigurationContext(object):
 
 
 class Configuration(object):
-    def __init__(self, _parent_globals: dict, class_type, mapped_properties: Union[dict, str]):
+    def __init__(self, _parent_globals: dict, class_type, mapped_properties: Union[dict, ConfigurationContext, ConfigurationSection]):
         if type(mapped_properties) is dict:
             json_data = mapped_properties
-        elif type(mapped_properties) is str:
-            with open(mapped_properties, 'r') as f:
-                json_str = f.readlines()
-                json_data = json.loads("".join(json_str))
         elif type(mapped_properties) is argparse.Namespace:
             # automatic support for argparse is enabled
             json_data = mapped_properties
+        elif isinstance(mapped_properties, (ConfigurationContext,)):
+            # mapping from configuration context or section
+            json_data = mapped_properties.file_as_dict
+        elif isinstance(mapped_properties, (ConfigurationSection,)):
+            # mapping
+            json_data = mapped_properties.settings
         else:
             print("UNSUPPORTED TYPE FOR CONFIGURATION: " + str(type(mapped_properties)))
             exit()
