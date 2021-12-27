@@ -4,6 +4,16 @@ from abc import ABCMeta, abstractmethod
 
 from servicecollection import ServiceCollection
 
+# This example shows a higher level of abstraction and interface design that the service collection
+# would be agnostic to.  You can use metaclasses and interface design to implement complex logic
+# and use the concrete class to fetch it from the service.  You can even use multiple inheritance
+# and it should still work as expected.
+
+# The example is a hypothetical situation where you need an abstract model to keep track of changes
+# programmatically so that middleware objects that use the abstract implementation can automate
+# tasks without knowing the actual concrete type of the parent class.  In essence this file also
+# illustrates when you would want to use custom meta classes, abstract implementations you would
+# like enforced and interface design in Python.
 
 class ModelInterface(metaclass=ABCMeta):
     @classmethod
