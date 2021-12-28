@@ -2,11 +2,8 @@ from __future__ import annotations
 import asyncio
 import random
 from asyncio.tasks import Task
-from typing import TYPE_CHECKING, Any, List
+from typing import Any, List
 from servicecollection import ServiceCollection
-
-if TYPE_CHECKING:
-    from src.service_collection.servicecollection import ServiceProvider
 
 
 # A little program that basically spins off threads with random wait times.
@@ -49,8 +46,8 @@ async def main():
         'spawn_amount': 40,
     })
     sc.singletons([Spawner, MassiveSpawner])
-    sp: ServiceProvider = sc.build_service_provider()
-    ms: MassiveSpawner = sp.get_service(MassiveSpawner)
+    sp = sc.build_service_provider()
+    ms = sp.get_service(MassiveSpawner)
     # asynchronously spawns threads that print and sleep a random number of seconds
     await ms.spawn()
 
