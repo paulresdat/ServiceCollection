@@ -15,7 +15,7 @@ myClass.doSomething()
 
 ## Intended Audience
 
-This package's primary audience is the creator for his own projects but if you know a little about dependency injection and clean architecture, this approach should be easy to understand.  If you're a Python beginner, this approach should be coupled with some reading on clean architecture and dependency injection.  It is expected that you will eventually pick up a book on the topic of software architecture.  If you're coming from a C# background, this should be strikingly similar to you and you should be able to start working with it immediately regardless of your Python experience.  This library's intended use is for larger maintainable python applications or a project with a team where there are collaborators.
+This package's primary audience is the creator for his own projects but if you know a little about dependency injection and clean architecture, this approach should be easy to understand.  If you're a Python beginner, this approach should be coupled with some reading on clean architecture and dependency injection.  It is expected that you will eventually pick up a book on the topic of software architecture.  If you're coming from a C# background, this should be strikingly familiar to you and you should be able to start working with it immediately regardless of your Python experience.  This library's intended use is for larger maintainable python applications or a project with a team where there are collaborators.
 
 
 ## Features
