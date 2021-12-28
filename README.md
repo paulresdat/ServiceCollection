@@ -189,15 +189,11 @@ class SqlConnection(object):
 
 The important thing to note here is the same principle is applied from the CsvMaker where the configuration object is a dependency in the constructor so that the service injection library can automatically resolve that for you. Here we see an example that the values that are specified in `main.py` is what is registered with the `SqlConfig` object.  This is an example of centrally defining settings in one place that's then used throughout the application where it is asked for.  Using settings JSON files is described in more details below.
 
-### Notes on Design Principles
-
-We can see from the above example how the architecture of an app can look, and we've demonstrated some simple injection principles as well as a basic configuration class.  This approach can differ from how folks usually write Python applications.  Even though dependency injection and service resolution does exist in Python, one can tell they're applied in a different kind of way that allows for resolution, perhaps in already existing applications that may not previously had automatic dependency resolution.  In contrast, this library coerces us to look at the entire organization and design of your app from the ground up.
-
-Folks that script applications and do not think about the architecture of their app as much, sole programmer types, or folks that don't think too much about what other eyes may be looking at the code that they've written such as those who would be required to maintain the code of the original programmer, may find some concepts strict and verbose in code.  As an example, I've seen folks make heavy use of dictionaries (associative arrays in other languages) and pass them everywhere for settings values and JSON data.  It's not a bad way, and it's easy and quick to do.  However, forcing a stricter approach to map dictionaries to explicit class properties may seem like more work than is necessary to some of these folks.  In this regard, this library may not be for them.  But I assure you, the benefits of maintaining code and reading code will be evident to you by adopting the design principles this library encourages.
+We can see from the above example how the architecture of an app can look, and we've demonstrated some simple injection principles as well as a basic configuration class.  This approach can differ from how folks usually write Python applications.  Even though dependency injection and service resolution does exist in Python, one can tell they're applied in a different kind of way for already existing applications that may not previously had automatic dependency resolution.  This library encourages us to look at the entire architecture and design of your app from the ground up at the start of tackling a new project.
 
 ### Configurations and Settings
 
-In this section we will be discussing the different scanarios you may need to setup static configuration data that you will need to pass around in your application.  There are 3 main ways of doing it, one way being an explicit approach for testing.  However there is a recommended way of using static data for your application, and that's by using JSON files that are then transformed to objects in memory when the application starts.  Below are the examples of 3 main ways you use configurations.
+In this section we will be discussing the different scanarios you may need to setup static configuration data that you may need to pass around in your application.  There are 3 main ways of doing it, one way being an explicit approach for testing.  However there is a recommended way of using static data for your application, and that's by using JSON files that are then transformed to objects in memory when the application starts.  Below are the examples of 3 main ways you use configurations.
 
 #### Configurations and Dictionaries
 
@@ -383,7 +379,99 @@ sc.configure(ChatConfig, ctxt.chat_configurations)
 
 This exmample illustrates the possibility and recommended way of extending the configuration context class so that configuration sections are exposed to the service collection as properties of the context object itself.  This allows for the best readability of the configuration maping.  For a larger application this example would be the recommended way of bootstrapping your configurations.
 
-#### Using Interfaces/Abstract Classes
+#### Settings Transformations
+
+The 3 main ways of transforming JSON data or dictionaries to configuration objects is outlined above, but what if this app has multiple targets and you have different database connections and third party app configurations that change per target environment.  Welcome settings transformations.  This feature allows you to have setting files in your repository for each target platform as well as dynamically transform them on runtime.  There are 2 main ways to start your transformations.
+
+
+*Example 1:*
+> Specify the target in code
+```python
+ctxt = ConfigurationContext("settings.json", "target1")
+sc.configure(ConfigObject, ctxt)
+```
+
+The `target1` setting is saying that the context has a specified target.  It will expect a file called `settings.target1.json` alongside `settings.json` and will first read in `settings.json` and then read in `settings.target1.json` and overwrite any variables.  For example:
+
+> settings.json
+```json
+{
+    "property_one": "one",
+    "property_two": {
+        "property_three": {
+            "term1": "one",
+            "term2": "two"
+        }
+    }
+}
+```
+
+> settings.target1.json
+```json
+{
+    "property_two": {
+        "property_three": {
+            "term2": "two"
+        }
+    }
+}
+```
+
+The configuration context object will read in `settings.json` and then it will read in `settings.target1.json` and overwrite only the `term2` property in the embedded JSON object.  Be aware that properties will be overwritten entirely:
+
+> settings.target2.json
+```json
+{
+    "property_two": {
+        "property_three": null
+    }
+}
+```
+
+This example would overwrite `property_three` to null.  The target settings file always takes precedence.  However, if there are extra properties that are not specified in `settings.json` but specified in the target settings file, it will be merged:
+
+> settings.target3.json
+```json
+{
+    "property_two": {
+        "property_three": {
+            "term3": "an added term only for target3"
+        }
+    }
+}
+```
+
+The resulting transformation from `settings.target3.json` would include `term1`, `term2` and `term3`.
+
+
+*Example 2:*
+> Using an environment variable
+```bash
+(venv) $> export SERVICE_COLLECTION_ENV="target1"
+(venv) $> python main.py
+```
+
+The ConfigurationContext object comes aware of the environment variable "SERVICE_COLLECITON_ENV" out of the box.  You can set this variable on your target machine, and it will transform to the target specified by that environment name.  If this environment name does not suffice for you, you can change the environment name in code as such:
+
+```python
+ctxt = ConfigurationContext("settings.json", target_context_os_env_name="MY_CUSTOM_ENV_VAR")
+```
+
+And in bash:
+
+```bash
+(venv) $> export MY_CUSTOM_ENV_VAR="target1"
+(venv) $> python main.py
+```
+
+The context will now be aware of your own environment variable and will transform to what that environment variable has instead.
+
+#### Quick Note on Context/Configuration Debugging
+
+For ease of use, I've exposed the context as an entire dictionary using Python's inbuilt utilities.  You can access the entire context's dictionary by exploding it as follows: `{ **ctxt }`.  For a configuration section, you can print out it's `settings` attribute which publically available to you.  Note that the ServiceCollection expects either a context or section object though.  The ability to expose the context as a dictionary is for debugging purposes so you can easily inspect the object by printing out to the console when your working on your app.
+
+
+### Using Interfaces/Abstract Classes
 
 Inversion of control employs the Liskov Substitution Principle where if a type T is a subtype of type S, then it can also be of type S.  This means you can subsitute a parent class with a child class in your application and not break it, as long as it adheres to the contract of the parent class.  Python uses abstract classes and a subclass magic method `__subclasshook__` to enforce an interface contract.  We need to use the abstract class library in Python to implement an interface as well asraise errors if the contract from the interface is not met from a child class that implements it.
 

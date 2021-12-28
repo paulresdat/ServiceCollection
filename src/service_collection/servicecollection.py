@@ -6,8 +6,9 @@ import os
 import json
 import re
 from abc import ABCMeta, abstractmethod
+from collections.abc import Mapping
 from argparse import Namespace
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 T = TypeVar("T")
 
@@ -94,27 +95,49 @@ class ServiceCollectionConst(enum.Enum):
     OS_ENV_NAME = "SERVICE_COLLECTION_CONF"
 
 
-class ConfigurationContext(object):
+class ConfigurationContext(Mapping[str, Any]):
     def __init__(
         self,
         json_file: str,
         target_context: Optional[str] = None,
-        overriden_target_context_os_env_name: Optional[str] = None
+        target_context_os_env_name: Optional[str] = None
     ):
         # declare all private properties
         self.__file: Optional[Dict[str, Any]] = None
         self.__json_file: str = json_file
         self.__target_context: Optional[str] = target_context
         self.__target_context_os_env: Optional[str] = None
+        # self.__file_as_dict: Dict[str, Any] = {}
         # end declaration
-
-        if overriden_target_context_os_env_name is not None:
-            self.__target_context_os_env = overriden_target_context_os_env_name
+        if target_context_os_env_name is not None:
+            self.__target_context_os_env = target_context_os_env_name
         else:
             self.__target_context_os_env = str(ServiceCollectionConst.OS_ENV_NAME.value)
         if target_context is None:
             # get the target context from the os name
             self.__target_context = os.getenv(self.__target_context_os_env)
+
+
+    def keys(self):
+        return self.__file_as_dict.keys()
+
+    def __getitem__(self, key: Any):
+        return self.get_section(str(key)).settings
+
+    def __iter__(self):
+        if self.__file_as_dict is None:
+            return iter({})
+        return iter(cast(Iterable[Any], self.__file_as_dict))
+
+    def __len__(self):
+        return len(self.keys())
+
+    @property
+    def __file_as_dict(self) -> Dict[str, Any]:
+        if self.__file is None:
+            self.__fetch_file()
+        return self.__file if self.__file is not None else {}
+
 
     def define_os_env_name(self, environment_variable_name: str) -> None:
         self.__target_context_os_env = environment_variable_name
@@ -122,7 +145,7 @@ class ConfigurationContext(object):
 
     def get_section(self, section: str) -> ConfigurationSection:
         args = section.split(":")
-        _f = self.file_as_dict
+        _f = self.__get_file()
         current_pos = ({} if _f is None else _f)
         for a in args:
             # drill into it
@@ -132,8 +155,7 @@ class ConfigurationContext(object):
                 return ConfigurationSection(None)
         return ConfigurationSection(current_pos)
 
-    @property
-    def file_as_dict(self) -> Optional[Dict[Any, Any]]:
+    def __get_file(self) -> Optional[Dict[Any, Any]]:
         if self.__file is None:
             self.__fetch_file()
         return self.__file
@@ -166,7 +188,7 @@ class ConfigurationContext(object):
                 destination_file[key] = source_file[key]
 
 
-class Configuration(object):
+class Configuration():
     def __init__(
         self,
         _parent_globals: Dict[str, Any],
@@ -181,7 +203,7 @@ class Configuration(object):
             json_data = mapped_properties
         elif isinstance(mapped_properties, (ConfigurationContext,)):
             # mapping from configuration context or section
-            _f = mapped_properties.file_as_dict
+            _f = {**mapped_properties}
             json_data = _f if _f is not None else {}
         elif isinstance(mapped_properties, (ConfigurationSection,)):
             # mapping
