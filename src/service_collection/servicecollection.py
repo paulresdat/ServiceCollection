@@ -92,7 +92,7 @@ class ConfigurationSection(object):
 
 
 class ServiceCollectionConst(enum.Enum):
-    OS_ENV_NAME = "SERVICE_COLLECTION_CONF"
+    OS_ENV_NAME = "SERVICE_COLLECTION_ENV"
 
 
 class ConfigurationContext(Mapping[str, Any]):
