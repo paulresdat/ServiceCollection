@@ -2,7 +2,7 @@ from __future__ import annotations
 import asyncio
 import random
 from asyncio.tasks import Task
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, List
 from servicecollection import ServiceCollection
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ class Spawner(object):
         pass
 
     async def go(self, name: str):
-        rand = random.randint(0,4)
+        rand = random.randint(0, 4)
         print("Starting thread " + name + " - sleeping : " + str(rand))
         await asyncio.sleep(rand)
         print("Ending thread: " + name)
@@ -32,9 +32,9 @@ class MassiveSpawner(object):
         self.__spawn_name = "number_"
 
     async def spawn(self):
-        tasks: List[Task] = []
+        tasks: List[Task[Any]] = []
         for i in range(0, self.__config.spawn_amount):
-            task = asyncio.create_task(self.__spawner.go(self.__spawn_name + " " + str(i+1)))
+            task = asyncio.create_task(self.__spawner.go(self.__spawn_name + " " + str(i + 1)))
             tasks.append(task)
         await asyncio.wait(tasks)
 
@@ -44,7 +44,7 @@ class SpawnConfig(object):
 
 
 async def main():
-    sc = ServiceCollection(globals())
+    sc = ServiceCollection.instance(globals())
     sc.configure(SpawnConfig, {
         'spawn_amount': 40,
     })

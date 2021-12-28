@@ -1,5 +1,6 @@
 import unittest
-from src.service_collection.servicecollection import ServiceCollection, ServiceProvider
+from src.service_collection.servicecollection import ServiceCollection
+
 
 class B(object):
     def __init__(self):
@@ -39,18 +40,19 @@ class TransientA(A):
 class TestServiceCollection(unittest.TestCase):
 
     def setUp(self):
-        sc = ServiceCollection(globals())
+        sc = ServiceCollection.instance(globals())
         sc.singletons([A, B])
         sc.transients([TransientA, TransientB])
-        sp: ServiceProvider = sc.build_service_provider()
+        sp = sc.build_service_provider()
         self.sp = sp
 
     def test_that_singletons_are_available_in_the_service_provider(self):
         a: A = self.sp.get_service(A)
+        print(a)
         self.assertEqual(a.get_name(), "n/a")
         a.set_name("hi")
         self.assertEqual(a.get_name(), "hi")
-        
+
         # demonstrates the singleton property
         # here, B is a dependency and a singleton
         # so when asked for, it should be the
@@ -68,5 +70,5 @@ class TestServiceCollection(unittest.TestCase):
         self.assertEqual(a.get_name(), "n/a")
         a.set_name("hi")
         self.assertEqual(a.get_name(), "hi")
-        again: TransientA = self.sp.get_service(TransientA)
+        again = self.sp.get_service(TransientA)
         self.assertEqual(again.get_name(), "n/a")

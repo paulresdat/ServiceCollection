@@ -1,8 +1,9 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Dict, List
 from abc import ABCMeta, abstractmethod
 
 from servicecollection import ServiceCollection
+
 
 # This example shows a higher level of abstraction and interface design that the service collection
 # would be agnostic to.  You can use metaclasses and interface design to implement complex logic
@@ -17,7 +18,7 @@ from servicecollection import ServiceCollection
 
 class ModelInterface(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls, subclass: Any):
         return (
             hasattr(subclass, 'set') and callable(subclass.set) and
             hasattr(subclass, 'save') and callable(subclass.save) and
@@ -30,28 +31,28 @@ class ModelInterface(metaclass=ABCMeta):
         )
 
     @abstractmethod
-    def set(self, key: str, value: Any):
+    def set(self, key: str, value: Any) -> None:
         """ set the internal data structure """
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
-    def get(self, key: str):
-        raise NotImplemented
+    def get(self, key: str) -> Any:
+        raise NotImplementedError
 
     @abstractmethod
-    def save(self, sql: ISql):
+    def save(self, sql: ISql) -> int:
         """ save loaded data """
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
-    def get_identity_key(self):
+    def get_identity_key(self) -> str:
         """ get the registered identity key """
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
-    def json_load(self, json: str):
+    def json_load(self, json: str) -> None:
         """ load the model via a json string """
-        raise NotImplemented
+        raise NotImplementedError
 
     # @abstractmethod
     # def dict_load(self, mapped_data: dict):
@@ -59,29 +60,29 @@ class ModelInterface(metaclass=ABCMeta):
     #     raise NotImplemented
 
     @abstractmethod
-    def get_keys(self):
+    def get_keys(self) -> List[str]:
         """ get keys """
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
-    def get_values(self):
+    def get_values(self) -> List[Any]:
         """ get values """
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
-    def get_key_values(self):
+    def get_key_values(self) -> Dict[str, Any]:
         """ get key value dictionary """
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
-    def get_table_name(self):
+    def get_table_name(self) -> str:
         """ get table name """
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class ISql(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls, subclass: Any):
         return (
             hasattr(subclass, 'update') and callable(subclass.update) and
             hasattr(subclass, 'sql') and callable(subclass.sql)
@@ -90,15 +91,16 @@ class ISql(metaclass=ABCMeta):
 
     @abstractmethod
     def insert(self, model: ModelAbstract) -> ISql:
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
     def update(self, model: ModelAbstract) -> ISql:
-        raise NotImplemented
+        raise NotImplementedError
 
     @abstractmethod
     def sql(self) -> str:
-        raise NotImplemented
+        raise NotImplementedError
+
 
 class Sql(ISql):
     def __init__(self):
@@ -107,8 +109,8 @@ class Sql(ISql):
 
     def insert(self, model: ModelAbstract) -> ISql:
         identity = model.get_identity_key()
-        keys = []
-        vals = []
+        keys: List[Any] = []
+        vals: List[Any] = []
         for k, v in model.get_key_values().items():
             if k != identity:
                 keys.append(k)
@@ -117,13 +119,12 @@ class Sql(ISql):
         self.__sql = "INSERT INTO " + model.get_table_name() + " ("
         self.__sql += ", ".join(keys) + ") VALUES ('"
         self.__sql += "', '".join([str(x) for x in vals]) + "')"
-        
         return self
 
     def update(self, model: ModelAbstract) -> ISql:
-        key_values: dict = model.get_key_values()
+        key_values = model.get_key_values()
         self.__sql = "UPDATE " + model.get_table_name() + " SET "
-        vals = []
+        vals: List[Any] = []
         for k, v in key_values.items():
             vals.append(k + " = '" + str(v) + "'")
         self.__sql += ", ".join([str(x) for x in vals])
@@ -134,15 +135,15 @@ class Sql(ISql):
 
 
 class ModelAbstract(ModelInterface):
-    def __init__(self, table_name: str, identity_column_name: str, column_information: dict):
+    def __init__(self, table_name: str, identity_column_name: str, column_information: Dict[str, Any]):
         self.__table_name = table_name
         self.__identity_column_name = identity_column_name
         self.__column_information = column_information
-        self.__key_values = {}
-        for c,d in column_information.items():
+        self.__key_values: Dict[str, Any] = {}
+        for c in column_information.keys():
             self.__key_values[c] = None
 
-    def set(self, key: str, value: Any):
+    def set(self, key: str, value: Any) -> None:
         self.__key_values[key] = value
 
     def get(self, key: str):
@@ -150,25 +151,25 @@ class ModelAbstract(ModelInterface):
 
     def save(self, sql: ISql) -> int:
         if self.__key_values[self.__identity_column_name] is None:
-            sql = sql.insert(self).sql()
+            sql_ = sql.insert(self).sql()
         else:
-            sql = sql.update(self).sql()
-        print(sql)
+            sql_ = sql.update(self).sql()
+        print(sql_)
         return 1
 
     def get_identity_key(self):
         return self.__identity_column_name
 
-    def json_load(self, json_string_data: str):
+    def json_load(self, json: str) -> None:
         pass
 
-    def get_keys(self):
+    def get_keys(self) -> List[str]:
         """ get keys """
-        return self.__key_values.keys()
+        return [x for x in self.__key_values.keys()]
 
-    def get_values(self):
+    def get_values(self) -> List[Any]:
         """ get values """
-        return self.__key_values.values()
+        return [x for x in self.__key_values.values()]
 
     def get_key_values(self):
         """ get key value dictionary """
@@ -178,9 +179,10 @@ class ModelAbstract(ModelInterface):
         """ get table name """
         return self.__table_name
 
+
 class ISuperModel(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls, subclass: Any):
         return (
             hasattr(subclass, 'id') and
             hasattr(subclass, 'name') and
@@ -188,29 +190,32 @@ class ISuperModel(metaclass=ABCMeta):
             NotImplemented
         )
 
+    @property
     @abstractmethod
-    def id(self):
-        raise NotImplemented
+    def id(self) -> int:
+        raise NotImplementedError
 
+    @property
     @abstractmethod
-    def name(self):
-        raise NotImplemented
+    def name(self) -> str:
+        raise NotImplementedError
 
+    @property
     @abstractmethod
-    def data_model(self):
-        raise NotImplemented
+    def data_model(self) -> str:
+        raise NotImplementedError
 
 
 class SuperModel(ModelAbstract, ISuperModel):
     def __init__(self):
         super().__init__("SuperModels", "Id", {
-            'Id': { 'type': int },
-            'Name': { 'type': str },
-            'DataModel': { 'type': str }
+            'Id': {'type': int},
+            'Name': {'type': str},
+            'DataModel': {'type': str}
         })
 
     @property
-    def id(self):
+    def id(self) -> int:
         return self.get('Id')
 
     @id.setter
@@ -236,15 +241,15 @@ class SuperModel(ModelAbstract, ISuperModel):
 
 class IModelRepository(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls, subclass: Any):
         return (
             hasattr(subclass, 'make_model') and callable(subclass.make_model)
             or NotImplemented
         )
 
     @abstractmethod
-    def make_model(self):
-        raise NotImplemented
+    def make_model(self) -> None:
+        raise NotImplementedError
 
 
 class ModelRepository(IModelRepository):
@@ -255,8 +260,9 @@ class ModelRepository(IModelRepository):
         model = SuperModel()
         model.save(self.__sql)
 
+
 def main():
-    sc = ServiceCollection(globals())
+    sc = ServiceCollection.instance(globals()) # ServiceCollection(globals())
     sc.singleton(IModelRepository, ModelRepository)
     sc.singleton(ISql, Sql)
     sp = sc.build_service_provider()
