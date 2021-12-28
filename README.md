@@ -117,20 +117,11 @@ from typing import TYPE_CHECKING
 from servicecollection import ServiceCollection
 from utitlities import CsvMaker, SqlConnection, SqlConfig
 
-# Using TYPE_CHECKING variable is very important in case you have a lot of dependencies.
-# Importing them everywhere in objects that only use the type hints can cause circular
-# reference problems in Python's import resolution logic.  It's important to make use
-# of this when a file only uses type hints of the object.
-if TYPE_CHECKING:
-    # We need this for type hinting and do not need to import it 
-    # directly, so only import for type checking resolution.
-    from servicecollection import ServiceProvider
-
 
 def main():
-    # we must define the service collection and pass all defined imports and
-    # variables from the `globals()` of this document.
-    # You can read for more details on using `globals()` later in this document.
+    # We must define the service collection and pass the global symbol table.
+    # ServiceCollection is a factory static class that returns a IServiceCollection
+    # interface where the implementation details reside behind a concealed class.
     sc = ServiceCollection.instance(globals())
     # configure your config object that SqlConnection relies on
     sc.configure(SqlConfig, {
@@ -138,9 +129,9 @@ def main():
         'password': 'password123',
         'database': 'sysdb',
     })
-    # register your singletons
+    # register your singletons, in this case they do not have interfaces
     sc.singletons([CsvMaker, SqlConnection])
-    # build the service provider
+    # build the service provider, returns the IServiceProvider interface
     sp = sc.build_service_provider()
     # get your main service, your single entry point
     csv = sp.get_service(CsvMaker)
