@@ -5,7 +5,7 @@ A simple python module that automates service dependencies using Python's new ty
 Beta version 0.0.1
 
 ```python
-sc = ServiceCollection(globals())
+sc = ServiceCollection.instance(globals())
 sc.singleton(IMyClass, MyClass)
 sp = sc.build_service_provider()
 myClass = sp.get_service(IMyClass)
@@ -43,7 +43,7 @@ Automatic service injection by reflection in statically typed languages have bee
 There are 3 main resolution types to be aware of: singletons, transients and configuration objects.
 
 ```python
-sc = ServiceCollection(globals())
+sc = ServiceCollection.instance(globals())
 sc.singleton(SingletonClass)
 sc.transient(TransientClass)
 sc.configure(ConfigurationClass, {})
@@ -76,7 +76,7 @@ And it is possible to use getter and setter properties for configuration objects
 class ConfigObject(object):
     property_one: str
     def __init__(self):
-        self.__property_one: str = None
+        self.__property_one: Optional[str] = None
 
     @property
     def property_one(self):
@@ -125,7 +125,7 @@ def main():
     # we must define the service collection and pass all defined imports and
     # variables from the `globals()` of this document.
     # You can read for more details on using `globals()` later in this document.
-    sc = ServiceCollection(globals())
+    sc = ServiceCollection.instance(globals())
     # configure your config object that SqlConnection relies on
     sc.configure(SqlConfig, {
         'username': 'user1',
@@ -135,9 +135,9 @@ def main():
     # register your singletons
     sc.singletons([CsvMaker, SqlConnection])
     # build the service provider
-    sp: ServiceProvider = sc.build_service_provider()
+    sp = sc.build_service_provider()
     # get your main service, your single entry point
-    csv: CsvMaker = sp.get_service(CsvMaker)
+    csv = sp.get_service(CsvMaker)
     # run the job
     csv.get_daily_totals("daily-totals.csv")
 
@@ -232,7 +232,7 @@ parser.add_argument('--property-one', type=str, help='Property one as a string')
 parser.add_argument('--property-two', type=bool, action='store_true', help='Property two as a boolean value')
 args = parser.parse_args(sys_args if sys_args else ['--help'])
 
-sc = ServiceCollection(globals())
+sc = ServiceCollection.instance(globals())
 sc.configure(ConfigObject, args)
 ```
 
@@ -258,7 +258,7 @@ class ConfigObject(object):
     property_one: str
     property_two: bool
 
-sc = ServiceCollection(globals())
+sc = ServiceCollection.instance(globals())
 ctxt = ConfigurationContext("settings.json")
 sc.configure(ConfigObject, ctxt)
 ```
@@ -300,7 +300,7 @@ class SqlLogConfig(object):
 class ChatConfig(object):
     long_running: bool
 
-sc = ServiceCollection(globals())
+sc = ServiceCollection.instance(globals())
 ctxt = ConfigurationContext("settings.json")
 sc.configure(DbConnectionConfig, ctxt.section("sql_configurations:db_connections"))
 sc.configure(SqlLogConfig, ctxt.section("sql_configurations:sql_log"))
@@ -361,7 +361,7 @@ class ChatConfig(object):
     amqp_conn: AmqpConnConfig
 
 class CustomConfigurationContext(ConfigurationContext):
-    def __init__(self, filename: str, target: str = None, overridden_env_name: str = None):
+    def __init__(self, filename: str, target: Optional[str] = None, overridden_env_name: Optional[str] = None):
         super().__init__(filename, target, overridden_env_name)
 
     @property
@@ -377,7 +377,7 @@ class CustomConfigurationContext(ConfigurationContext):
         return self.section("chat_configurations")
 
 
-sc = ServiceCollection(globals())
+sc = ServiceCollection.instance(globals())
 ctxt = CustomConfigurationContext("settings.json")
 sc.configure(DbConnectionConfig, ctxt.db_configurations)
 sc.configure(SqlLogConfig, ctxt.sql_log_configurations)
@@ -439,12 +439,12 @@ There's nothing stopping you from setting up your services independently of each
 class TestingRepo(unittest.TestCase):
     # if you just need the service provider without custom mocking for each test
     def setUp(self):
-        sc = ServiceCollection(globals())
+        sc = ServiceCollection.instance(globals())
         sc.addsingletons([ClassA, ClassB])
         self.__sp = sc.build_service_provider()
 
     def test_when_something_happens(self):
-        classA: ClassA = self.__sp.get_service(ClassA)
+        classA = self.__sp.get_service(ClassA)
         .. do your test ..
 ```
 
@@ -459,7 +459,7 @@ class TestingRepo(unittest.TestCase):
         self.assertTrue(sql_conn.connect())
 
     def __get_sp(self, mock_sql_conn: False) -> ServiceProvider:
-        sc = ServiceCollection(globals())
+        sc = ServiceCollection.instance(globals())
         # allowing a central point for the service provider while allowing
         # for some conditionals that can change by test
         if mock_sql_conn:
@@ -508,12 +508,12 @@ class ServiceA(object):
         service_b = self.__sp.get_service(ServiceB)
         return service_b.service_name
 
-sc = ServiceCollection(globals)
+sc = ServiceCollection.instance(globals)
 sc.singletons([ServiceA, ServiceB])
-sp: ServiceProvider sc.build_service_provider()
+sp sc.build_service_provider()
 # BAD, never do this, this is just bad design
 sc.singleton(ServiceProvider, lambda: sp)
-new_sp: ServiceProvider = sc.build_service_provider()
+new_sp = sc.build_service_provider()
 
 s = new_sp.get_service(ServiceA)
 # BAD
@@ -540,9 +540,9 @@ class ServiceA(object):
     def get_name(self):
         return self.__service_b.service_name
 
-sc = ServiceCollection(globals)
+sc = ServiceCollection.instance(globals)
 sc.singletons([ServiceA, ServiceB])
-sp: ServiceProvider sc.build_service_provider()
+sp = sc.build_service_provider()
 s = sp.get_service(ServiceA)
 s.get_name()
 ```
