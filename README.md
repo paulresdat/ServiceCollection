@@ -6,9 +6,9 @@ Beta version 0.0.1
 
 ```python
 sc = ServiceCollection(globals())
-sc.singletons([MyFirstClass, MySecondClass])
-sp: ServiceProvider = sc.build_service_provider()
-myClass: MyFirstClass = sp.get_service(MyFirstClass)
+sc.singleton(IMyClass, MyClass)
+sp = sc.build_service_provider()
+myClass = sp.get_service(IMyClass)
 
 myClass.doSomething()
 ```
@@ -386,10 +386,49 @@ sc.configure(ChatConfig, ctxt.chat_configurations)
 
 This exmample illustrates the possibility and recommended way of extending the configuration context class so that configuration sections are exposed to the service collection as properties of the context object itself.  This allows for the best readability of the configuration maping.  For a larger application this example would be the recommended way of bootstrapping your configurations.
 
+#### Using Interfaces/Abstract Classes
+
+Classical inversion of control deploys the Liskov Principle where if a type T is a subtype of type S, then it can also be of type S.  This means you can subsitute a parent class with a child class, as long as it adheres to the contract of the parent class.  This is how Python does it.  We need to use the abstract class library in Python to implement an interface that strictly defines a contract and will raise errors if that contract is not met from a child class that implements it.
+
+```python
+from abc import ABCMeta, abstractmethod
+
+class IMyClass(metclass=ABCMeta):
+    @classmethod
+    def __subclasshook__(cls, subclass: Any):
+        return (
+            hasattr(subclass, 'foo') and callable(subclass.foo)
+            or NotImplemented
+        )
+
+    @abstractmethod
+    def foo(self) -> bool:
+        raise NotImplementedError
+
+
+class MyClass(IMyClass):
+    def __init__(self):
+        pass
+
+    def foo(self):
+        return True
+```
+
+Now that we've setup our contract (the interface IMyClass) and defined an abstract method that must be implmented, we can then use this in our service collection as such:
+
+```python
+sc = ServiceCollection.instance(globals())
+sc.singleton(IMyClass, MyClass)
+sp = sc.build_service_provider()
+myClass = sp.get_service(IMyClass)
+print(myClass.foo())
+```
+
+The following will print "True".  We've successfully decoupled our contract with our implementation in our service collection, and now we can swap out `MyClass` with another class that implements `IMyClass`.
 
 ## Unit/Integration Testing
 
-One of the highlights of using dependency injection is its inversion of dependency paradigm allows us to push mocked dependencies that have pre defined values in a testing context.  This decoupling of internal code to injected instances allows us to test our code in a modular fashion.  Coupled code is notoriously more difficult to test.
+One of the highlights of using dependency injection is that its inversion of dependency paradigm allows us to inject mocked objects that have pre-defined values in a testing context in place of its dependencies.  This decoupling of internal code to injected instances allows us to test our code in a modular fashion.  Coupled code is notoriously more difficult to test.
 
 This library's goal is to have an easy interface for mocking and testing when setting up your dependencies.  The 2 libraries that have been used with the service collection are `pytest` and `unittest`.  Concievably, this library should work with any testing framework.
 
