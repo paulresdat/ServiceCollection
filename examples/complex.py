@@ -24,7 +24,7 @@ class ModelInterface(metaclass=ABCMeta):
             hasattr(subclass, 'save') and callable(subclass.save) and
             hasattr(subclass, 'json_load') and callable(subclass.json_load) and
             hasattr(subclass, 'get_keys') and callable(subclass.get_keys) and
-            hasattr(subclass, 'get_values') and callable(subclass.get_values) and 
+            hasattr(subclass, 'get_values') and callable(subclass.get_values) and
             hasattr(subclass, 'get_table_name') and callable(subclass.get_table_name) and
             hasattr(subclass, 'get_key_values') and callable(subclass.get_key_values)
             or NotImplemented
@@ -262,12 +262,11 @@ class ModelRepository(IModelRepository):
 
 
 def main():
-    sc = ServiceCollection.instance(globals()) # ServiceCollection(globals())
+    sc = ServiceCollection.instance(globals())
     sc.singleton(IModelRepository, ModelRepository)
     sc.singleton(ISql, Sql)
     sp = sc.build_service_provider()
-    repo: IModelRepository = sp.get_service(IModelRepository)
-    print(isinstance(repo, IModelRepository))
+    repo = sp.get_service(IModelRepository)
     repo.make_model()
 
 

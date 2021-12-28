@@ -115,7 +115,7 @@ Where the main entry point of your application is `main.py` and the logic for yo
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from servicecollection import ServiceCollection
-from utitlities import CsvMaker, SqlConnection, SqlConfig
+from lib.utitlities import CsvMaker, SqlConnection, SqlConfig
 
 
 def main():
@@ -468,7 +468,7 @@ The context will now be aware of your own environment variable and will transfor
 
 #### Quick Note on Context/Configuration Debugging
 
-For ease of use, I've exposed the context as an entire dictionary using Python's inbuilt utilities.  You can access the entire context's dictionary by exploding it as follows: `{ **ctxt }`.  For a configuration section, you can print out it's `settings` attribute which publically available to you.  Note that the ServiceCollection expects either a context or section object though.  The ability to expose the context as a dictionary is for debugging purposes so you can easily inspect the object by printing out to the console when your working on your app.
+For ease of use, I've exposed the context as an entire dictionary using Python's inbuilt utilities.  You can access the entire context's dictionary by exploding it as follows: `{ **ctxt }`.  For a configuration section, you can print out it's `settings` attribute which is publically available to you: `ctxt.get_section("setting_one:property").settings`.  Note that the ServiceCollection expects either a context or section object though.  The ability to expose the context as a dictionary is for debugging purposes so you can easily inspect the object by printing out to the console when you're working on your app.
 
 
 ### Using Interfaces/Abstract Classes
