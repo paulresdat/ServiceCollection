@@ -15,7 +15,7 @@ myClass.doSomething()
 
 ## Intended Audience
 
-This package's primary audience is the creator for his own projects but if you know a little about dependency injection and clean architecture, this approach should be easy to understand.  If you're a Python beginner, this approach should be coupled with some reading on clean architecture and dependency injection.  It is expected that you will eventually pick up a book on the topic of software architecture.  If you're coming from a C# background, this should be strikingly similar to you and you should be able to start working with it immediately regardless of your Python experience.  This library's intended use is for larger maintainable python applications or cron jobs that would have more than one person actively developing and maintaining.
+This package's primary audience is the creator for his own projects but if you know a little about dependency injection and clean architecture, this approach should be easy to understand.  If you're a Python beginner, this approach should be coupled with some reading on clean architecture and dependency injection.  It is expected that you will eventually pick up a book on the topic of software architecture.  If you're coming from a C# background, this should be strikingly similar to you and you should be able to start working with it immediately regardless of your Python experience.  This library's intended use is for larger maintainable python applications or a project with a team where there are collaborators.
 
 
 ## Features
@@ -35,7 +35,13 @@ pip install servicecollection
 
 ## Documentation
 
+### Primer
+
 Automatic service injection by reflection in statically typed languages have been around for a while.  Python however is a duck typed language where variables can be of any type.  Later versions of Python introduced type hinting and annotations that allow us to now inspect objects to get at a type hint on a variable or argument.  This is similar in respect to reflection in statically typed languages like C#.  Now that we can view this data by type and not by instantiation, we can resolve dependencies with explicit type hinting without expecting an already instantiated object.  This opens up the door for automating dependency injection without a long list of boiler plate code to adhere to the design.
+
+This way of using dependencies with a single point of entry allows the programmer to focus almost entirely on the act of programming the application, how these classes interact with each other, and the architecture of the software itself without dealing with the boiler plate code that comes with manual dependency injection.  Classes are the primary vehicle used within the service collection which coerces the application to work within a class dominated software architecture.  So class types are the expected object as dependencies that are only injected through the constructor or `__init__` method of a class.  There will never be any other way of doing it in this library.
+
+This approach may not be for everyone, since Python is a very fluid language, folks find themselves in comfort zones because they know their own code.  I like to write almost entirely in classes and I like the SOLID principle approach to software architecture and I appreciate a good dependency injection paradigm, and if I can automate injection by class types, I'm gonna do it.  Type hints allows me to do this.  This library is for me mostly but if you like it, I'm open to suggestions and contributions.
 
 
 ### Singletons, Transients and Configurations
@@ -388,7 +394,7 @@ This exmample illustrates the possibility and recommended way of extending the c
 
 #### Using Interfaces/Abstract Classes
 
-Classical inversion of control deploys the Liskov Principle where if a type T is a subtype of type S, then it can also be of type S.  This means you can subsitute a parent class with a child class, as long as it adheres to the contract of the parent class.  This is how Python does it.  We need to use the abstract class library in Python to implement an interface that strictly defines a contract and will raise errors if that contract is not met from a child class that implements it.
+Inversion of control employs the Liskov Substitution Principle where if a type T is a subtype of type S, then it can also be of type S.  This means you can subsitute a parent class with a child class in your application and not break it, as long as it adheres to the contract of the parent class.  Python uses abstract classes and a subclass magic method `__subclasshook__` to enforce an interface contract.  We need to use the abstract class library in Python to implement an interface as well asraise errors if the contract from the interface is not met from a child class that implements it.
 
 ```python
 from abc import ABCMeta, abstractmethod
@@ -414,7 +420,7 @@ class MyClass(IMyClass):
         return True
 ```
 
-Now that we've setup our contract (the interface IMyClass) and defined an abstract method that must be implmented, we can then use this in our service collection as such:
+Now that we've got our contract (the interface IMyClass) and defined an abstract method that must be implmented, we can then use this in our service collection as such:
 
 ```python
 sc = ServiceCollection.instance(globals())
@@ -425,6 +431,16 @@ print(myClass.foo())
 ```
 
 The following will print "True".  We've successfully decoupled our contract with our implementation in our service collection, and now we can swap out `MyClass` with another class that implements `IMyClass`.
+
+Note that it is possible to chain multiple dependencies using the `singletons` method:
+
+```python
+sc.singletons([
+    [IMyClass, MyClass],
+    [IMyClass2, MyClass2],
+    ... etc ...
+])
+```
 
 ## Unit/Integration Testing
 
