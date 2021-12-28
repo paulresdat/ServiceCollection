@@ -423,7 +423,7 @@ print(myClass.foo())
 
 The following will print "True".  We've successfully decoupled our contract with our implementation in our service collection, and now we can swap out `MyClass` with another class that implements `IMyClass`.
 
-Note that it is possible to chain multiple dependencies using the `singletons` method:
+Note that it is possible to chain multiple dependencies using the `singletons` method.  This is a shorthand from writing multiple `singleton` statements:
 
 ```python
 sc.singletons([
