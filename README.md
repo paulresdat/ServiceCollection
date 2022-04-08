@@ -396,7 +396,7 @@ class JsonLoader(IJsonLoader):
     def dumps(self, data: Any):
         return commentjson.dumps(data)
 
-config = CustomConfigurationContext("config.json", json_loader=JsonLoader())
+ctxt = ConfigurationContext("config.json", json_loader=JsonLoader())
 ```
 
 I would want to use this instead if I wanted to allow comments.  Comment json is python module you can use instead that allows you to comment out the json file:
