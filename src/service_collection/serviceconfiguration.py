@@ -12,6 +12,31 @@ class ServiceCollectionConst(enum.Enum):
     OS_ENV_NAME = "SERVICE_COLLECTION_ENV"
 
 
+class IConfigurationObject(metaclass=ABCMeta):
+    @classmethod
+    def __subclasshook__(cls, subclass: Any):
+        return (
+            hasattr(subclass, 'transform_to_dict') and callable(subclass.transform_to_dict)
+            or NotImplemented
+        )
+
+    @abstractmethod
+    def transform_to_dict(self) -> dict:
+        raise NotImplementedError()
+
+
+class BaseConfigurationObject(IConfigurationObject):
+    def transform_to_dict(self):
+        d = dict()
+        for k in self.__annotations__.keys():
+            val = getattr(self, k)
+            if isinstance(val, IConfigurationObject):
+                d[k] = val.transform_to_dict()
+            else:
+                d[k] = val
+        return d
+
+
 class ConfigurationSection(object):
     def __init__(self, settings_as_dict: Optional[Dict[str, Any]]):
         self.__settings = settings_as_dict
