@@ -354,8 +354,8 @@ class ChatConfig(object):
     amqp_conn: AmqpConnConfig
 
 class CustomConfigurationContext(ConfigurationContext):
-    def __init__(self, filename: str, target: Optional[str] = None, overridden_env_name: Optional[str] = None):
-        super().__init__(filename, target, overridden_env_name)
+    def __init__(self, filename: str, target: Optional[str] = None, overridden_env_name: Optional[str] = None, json_loader: IJsonLoader = None):
+        super().__init__(filename, target, overridden_env_name, json_loader)
 
     @property
     def db_configurations(self) -> ConfigurationSection:
@@ -378,6 +378,39 @@ sc.configure(ChatConfig, ctxt.chat_configurations)
 ```
 
 This exmample illustrates the possibility and recommended way of extending the configuration context class so that configuration sections are exposed to the service collection as properties of the context object itself.  This allows for the best readability of the configuration maping.  For a larger application this example would be the recommended way of bootstrapping your configurations.
+
+#### Custom JSON Loader
+
+Support for a custom JSON loader outside of the standard `json` module allows you to use a different module as long as you wrap it in the `IJsonLoader` interface.  You can then inject that wrapper into the custom configuration object as demonstrated below:
+
+```python
+import commentjson
+
+class JsonLoader(IJsonLoader):
+    def __init__(self):
+        super().__init__();
+
+    def loads(self, data: str):
+        return commentjson.loads(data)
+ 
+    def dumps(self, data: Any):
+        return commentjson.dumps(data)
+
+config = CustomConfigurationContext("config.json", json_loader=JsonLoader())
+```
+
+I would want to use this instead if I wanted to allow comments.  Comment json is python module you can use instead that allows you to comment out the json file:
+
+```json
+{
+    // I want to comment in this
+    "property_one": 1,
+    // And I want to comment out this property
+    //"propety_two": 2,
+}
+```
+
+This works better if you have a config file that requires some fluidity in change.  One example is that I need to download files from multiple servers however most of the time it's from only one.  Sometimes I need to download from the other and I haven't a desire to put both in the configuration file so I just comment out one to place in the other when I need to.  There are probably other reasons but suffice it to say this allows you to use any other JSON module in case the built in `json` module doesn't fit your requirements.
 
 #### Settings Transformations
 
