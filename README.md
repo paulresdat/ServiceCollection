@@ -399,7 +399,7 @@ class JsonLoader(IJsonLoader):
 ctxt = ConfigurationContext("config.json", json_loader=JsonLoader())
 ```
 
-I would want to use this instead if I wanted to allow comments.  Comment json is python module you can use instead that allows you to comment out the json file:
+I would want to use this interface if I wanted to inject a different module for loading and dumping JSON data for configurations.  The module in this example allows you to put comments into your JSON data as long as there's newlines:
 
 ```json
 {
