@@ -21,13 +21,13 @@ class IConfigurationObject(metaclass=ABCMeta):
         )
 
     @abstractmethod
-    def transform_to_dict(self) -> dict:
+    def transform_to_dict(self) -> Dict[str, Any]:
         raise NotImplementedError()
 
 
 class BaseConfigurationObject(IConfigurationObject):
-    def transform_to_dict(self):
-        d = dict()
+    def transform_to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = dict()
         for k in self.__annotations__.keys():
             val = getattr(self, k)
             if isinstance(val, IConfigurationObject):
@@ -48,7 +48,7 @@ class ConfigurationSection(object):
 
 class IJsonLoader(metaclass=ABCMeta):
     @classmethod
-    def __subclasshook__(self, subclass: Any):
+    def __subclasshook__(cls, subclass: Any):
         return (
             hasattr(subclass, 'loads') and callable(subclass.loads) and
             hasattr(subclass, 'dumps') and callable(subclass.dumps)
@@ -56,11 +56,11 @@ class IJsonLoader(metaclass=ABCMeta):
         )
 
     @abstractmethod
-    def loads(self, data: str):
+    def loads(self, data: str) -> Dict[str, Any]:
         raise NotImplementedError()
 
     @abstractmethod
-    def dumps(self, data: Any):
+    def dumps(self, data: Any) -> str:
         raise NotImplementedError()
 
 
@@ -70,7 +70,7 @@ class ConfigurationContext(Mapping[str, Any]):
         json_file: str,
         target_context: Optional[str] = None,
         target_context_os_env_name: Optional[str] = None,
-        json_loader: IJsonLoader = None
+        json_loader: Optional[IJsonLoader] = None
     ):
         # declare all private properties
         self.__file: Optional[Dict[str, Any]] = None
@@ -129,7 +129,7 @@ class ConfigurationContext(Mapping[str, Any]):
             self.__fetch_file()
         return self.__file
 
-    def __load_s(self, file_name: str):
+    def __load_s(self, file_name: str) -> Dict[str, Any]:
         # no try catch! let it fail if there's an issue
         with open(file_name, 'r') as f:
             lines = f.readlines()
