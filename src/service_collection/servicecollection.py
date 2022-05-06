@@ -437,7 +437,7 @@ class ServiceScope(IServiceScope):
 
     # use for the singleton pattern
     @classmethod
-    def _new(_, cls: IServiceScope, t: Type):
+    def _new(_, cls: IServiceScope, t: Type[IServiceScope]) -> IServiceScope:
         if cls._instance is None:
             print('Creating new service scope for django injection')
             cls._instance = super(t, cls).__new__(cls)
