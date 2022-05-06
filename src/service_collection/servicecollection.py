@@ -274,6 +274,9 @@ class _PrivateServiceCollection(IServiceCollection):
         class_type: type,
         constructed_args: Optional[Union[List[Any], Tuple[Any]]] = None
     ):
+        # adding support for classes without an init method (there are no dependencies)
+        if '__init__' not in class_type.__dict__:
+            return []
         # first through inspection find the number of arguments
         args = inspect.signature(class_type.__init__)
         params = args.parameters
