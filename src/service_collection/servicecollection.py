@@ -394,3 +394,72 @@ class ServiceProvider(IServiceProvider):
         assert class_type is not None
         type_: T = self.__service_collection.fetch_service(class_type)
         return type_
+
+
+class IServiceScope(metaclass=ABCMeta):
+    @classmethod
+    def __subclasshook__(cls, subclass):
+        return (
+            hasattr(subclass, 'get_instance') and callable(subclass.get_instance)
+            and hasattr(subclass, 'register_services') and callable(subclass.register_services)
+            or NotImplemented
+        )
+
+    @abstractmethod
+    def get_instance(self, classType: Type[T]) -> T:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def register_services(self):
+        raise NotImplementedError()
+
+
+class ServiceScope(IServiceScope):
+    def __init__(self, global_dir: dict):
+        self.__sc = ServiceCollection.instance(global_dir)
+        self.__sp = None
+        self.register_services()
+
+    @property
+    def sp(self) -> IServiceProvider:
+        if self.__sp is not None:
+            return self.__sp
+        else:
+            self.__sp = self.__sc.build_service_provider()
+            return self.__sp
+
+    @property
+    def sc(self) -> IServiceCollection:
+        return self.__sc
+
+    # use for the singleton pattern
+    @classmethod
+    def _new(_, cls: IServiceScope, t: Type):
+        if cls._instance is None:
+            print('Creating new service scope for django injection')
+            cls._instance = super(t, cls).__new__(cls)
+            return cls._instance
+        print('not creating it again')
+        return cls._instance
+
+
+    def get_instance(self, classType: Type[T]) -> T:
+        return self.sp.get_service(classType)
+
+
+def django_service_injector(container_type: Type[IServiceScope]):
+    def injector_outer(fn):
+        @wraps(fn)
+        def injector_inner(*args, **kwargs):
+            container: IServiceScope = container_type()
+            # django request object
+            nargs = [args[0]]
+            nkwargs = {}
+            # introspect the function
+            if len(fn.__annotations__.keys()) > 0:
+                for k,v in fn.__annotations__.items():
+                    nkwargs[k] = container.get_instance(v)
+            return fn(*nargs, **nkwargs)
+        return injector_inner
+    return injector_outer
+
