@@ -443,10 +443,9 @@ class ServiceScope(IServiceScope):
     @classmethod
     def _new(cls: Any, cls2: IServiceScope, t: Type[IServiceScope]) -> IServiceScope:
         if cls2._instance is None:
-            print('Creating new service scope for django injection')
+            print('Registering scope service: ' + t.__name__)
             cls2._instance = super(t, cls).__new__(cls)
             return cls2._instance
-        print('not creating it again')
         return cls._instance
 
     def get_instance(self, classType: Type[T]) -> T:

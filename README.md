@@ -612,7 +612,7 @@ Regardless of how you use `ServiceScope`, the `ServiceCollection` algorithm will
 
 ### Use the Service Scope For Your Containers
 
-You want to extend the `ServiceScope` class in your own scope container when you want to use this library with another framework like Django.  Extending the `ServiceScope` allows you to use it with the provided django injector wrapper function.  By extending the `ServiceScope`, you get to enjoy the singleton pattern out of the box.  Also, you can use the `IServiceScope` interface when you create your own wrapper function that takes your custom scope containers.  By working off of the interface `IServiceScope`, you can define a single function that can use any of your service scopes if you define more than one.
+You want to extend the `ServiceScope` class in your own scope container when you want to use this library with another framework like Django.  Extending the `ServiceScope` allows you to use it with the provided django injector wrapper function.  By extending the `ServiceScope`, you get to enjoy the singleton pattern out of the box.  Also, you can use the `IServiceScope` interface when you create your own wrapper function that takes your custom scope containers.  By working off of the interface `IServiceScope`, you can define a single function that can be used for any of your service scopes if you define more than one.
 
 ## Unit/Integration Testing
 
