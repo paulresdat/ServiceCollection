@@ -2,7 +2,9 @@ import argparse
 import inspect
 import copy
 from abc import ABCMeta, abstractmethod
+from types import FunctionType
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union, cast
+from functools import wraps
 
 from .serviceconfiguration import Configuration, ConfigurationContext, ConfigurationSection
 
@@ -273,7 +275,7 @@ class _PrivateServiceCollection(IServiceCollection):
         self,
         class_type: type,
         constructed_args: Optional[Union[List[Any], Tuple[Any]]] = None
-    ):
+    ) -> List[Dict[str, Any]]:
         # adding support for classes without an init method (there are no dependencies)
         if '__init__' not in class_type.__dict__:
             return []
@@ -400,8 +402,10 @@ class ServiceProvider(IServiceProvider):
 
 
 class IServiceScope(metaclass=ABCMeta):
+    _instance: Union['IServiceScope', None] = None
+
     @classmethod
-    def __subclasshook__(cls, subclass):
+    def __subclasshook__(cls, subclass: Any):
         return (
             hasattr(subclass, 'get_instance') and callable(subclass.get_instance)
             and hasattr(subclass, 'register_services') and callable(subclass.register_services)
@@ -413,12 +417,12 @@ class IServiceScope(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def register_services(self):
+    def register_services(self) -> None:
         raise NotImplementedError()
 
 
 class ServiceScope(IServiceScope):
-    def __init__(self, global_dir: dict):
+    def __init__(self, global_dir: Dict[Any, Any]):
         self.__sc = ServiceCollection.instance(global_dir)
         self.__sp = None
         self.register_services()
@@ -437,32 +441,30 @@ class ServiceScope(IServiceScope):
 
     # use for the singleton pattern
     @classmethod
-    def _new(_, cls: IServiceScope, t: Type[IServiceScope]) -> IServiceScope:
-        if cls._instance is None:
+    def _new(cls: Any, cls2: IServiceScope, t: Type[IServiceScope]) -> IServiceScope:
+        if cls2._instance is None:
             print('Creating new service scope for django injection')
-            cls._instance = super(t, cls).__new__(cls)
-            return cls._instance
+            cls2._instance = super(t, cls).__new__(cls)
+            return cls2._instance
         print('not creating it again')
         return cls._instance
-
 
     def get_instance(self, classType: Type[T]) -> T:
         return self.sp.get_service(classType)
 
 
-def django_service_injector(container_type: Type[IServiceScope]):
-    def injector_outer(fn):
+def django_service_injector(container_type: Type[IServiceScope]) -> object:
+    def injector_outer(fn: FunctionType):
         @wraps(fn)
-        def injector_inner(*args, **kwargs):
+        def injector_inner(*args: List[Any], **kwargs: Dict[Any, Any]):
             container: IServiceScope = container_type()
             # django request object
-            nargs = [args[0]]
-            nkwargs = {}
+            nargs = args
             # introspect the function
             if len(fn.__annotations__.keys()) > 0:
                 for k,v in fn.__annotations__.items():
-                    nkwargs[k] = container.get_instance(v)
-            return fn(*nargs, **nkwargs)
+                    kwargs[k] = container.get_instance(v)
+            return fn(*nargs, **kwargs)
         return injector_inner
     return injector_outer
 

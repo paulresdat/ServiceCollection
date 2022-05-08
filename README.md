@@ -1,4 +1,4 @@
-# Service Collection Factory for Python CLI Apps
+# Service Collection Factory
 
 A simple python module that automates service dependencies using Python's new type hints.  This approach is inspired by automatic dependency resolution in statically typed languages.
 
@@ -12,6 +12,9 @@ myClass = sp.get_service(IMyClass)
 
 myClass.doSomething()
 ```
+
+This framework is priarily for command line applications.  This library's service scopes can be used to inject instances into methods.  This is for integration into 3rd party applications such as Django.  There's no plan for direct support for 3rd party frameworks and applications.  You must build your own wrapper functions for the stack you're working with.
+
 
 ## Intended Audience
 
@@ -37,11 +40,11 @@ pip install servicecollection
 
 ### Primer
 
-Automatic service injection by reflection in statically typed languages have been around for a while.  Python however is a duck typed language where variables can be of any type.  Later versions of Python introduced type hinting and annotations that allow us to now inspect objects to get at a type hint on a variable or argument.  This is similar in respect to reflection in statically typed languages like C#.  Now that we can view this data by type and not by instantiation, we can resolve dependencies with explicit type hinting without expecting an already instantiated object.  This opens up the door for automating dependency injection without a long list of boiler plate code to adhere to the design.
+Automatic service injection by reflection in statically typed languages have been around for a while.  Python however is a duck typed language where variables can be of any type.  Later versions of Python introduced type hinting annotations that allow us to now inspect objects to get at a type hint on a variable or argument.  This is similar in respect to reflection in statically typed languages like C#.  Now that we can view this data by type and not by instantiation, we can resolve dependencies with explicit type hinting without expecting an already instantiated object.  This opens up the door for automating dependency injection without a long list of boiler plate code to adhere to the design.
 
-This way of using dependencies with a single point of entry allows the programmer to focus almost entirely on the act of programming the application, how these classes interact with each other, and the architecture of the software itself without dealing with the boiler plate code that comes with manual dependency injection.  Classes are the primary vehicle used within the service collection which coerces the application to work within a class dominated software architecture.  So class types are the expected object as dependencies that are only injected through the constructor or `__init__` method of a class.  There will never be any other way of doing it in this library.
+This way of using dependencies with a single point of entry allows the programmer to focus almost entirely on the act of programming the application, how these classes interact with each other, and the architecture of the software itself without dealing with the boiler plate code that comes with manual dependency injection.  Classes are the primary vehicle used within the service collection which coerces the application to work within a class dominated architecture.  So class types are the expected object as dependencies that are only injected through the constructor or `__init__` method of a class.
 
-This approach may not be for everyone, since Python is a very fluid language, folks find themselves in comfort zones because they know their own code.  I like to write almost entirely in classes and I like the SOLID principle approach to software architecture and I appreciate a good dependency injection paradigm, and if I can automate injection by class types, I'm gonna do it.  Type hints allows me to do this.  This library is for me mostly but if you like it, I'm open to suggestions and contributions.
+This approach may not be for everyone, since Python is a very fluid language, folks find themselves in comfort zones because they know their own code.  I like to write almost entirely in classes and I like the SOLID principle approach to software architecture and I appreciate a good dependency injection paradigm, and if I can automate injection by class types, I'm gonna do it.  Type hints in Python allows me to do this.  This library is for me mostly but if you like it, I'm open to suggestions and contributions.
 
 
 ### Singletons, Transients and Configurations
@@ -553,6 +556,63 @@ sc.singletons([
     ... etc ...
 ])
 ```
+
+## Service Scopes and 3rd Party Framework Injection
+
+### Django as an Example
+
+This service dependency resolution library revolves around classes while the Django framework does not.  Django's "View" methods are the "Controller" in the MVC world.  Their documentation addresses this discrepancy, however for our purposes it's important to note where the controller mechanism is since their nomenclature does not follow convention.
+
+In the Model-View-Controller paradigm, services are injected through the constructor of your controller.  Your controller receives the dependencies that are required for your page to render.  In Django that means injecting your dependencies through the view method for that page.  Let us examine the following code:
+
+```python
+def index(request):
+    return HttpResponse('Hello world, this is a django index page')
+```
+
+This is a simple Django method that the framework would call to render a simple page.  Notice how Django injects the request object into the view.  For this library to work, or to inject our dependencies into this view, we need to create a wrapper function.  It's not good enough to inject the service collection and register all our services over and over again.  If we are to create a function that we call in the index that returns a service provider that we then fetch our services from, we would introduce an anti-pattern where we continue to register and fetch a service provider in multiple places in the code.
+
+To address this issue, I've created a simple "ServiceScope" pattern that employs the singleton pardigm to ensure only one collection is instantiated for each request.
+
+### Service Scope
+
+The following example is the template you should use if you want to create a service scope to inject into other parts of another framework.
+
+```python
+from servicecollection import ServiceScope
+
+class MyServiceScope(ServiceScope):
+    def __init__(self):
+        super().__init__(globals())
+
+    # This ensures the singleton approach
+    def __new__(cls):
+        self._new(cls, MyServiceScope)
+
+    def register_instances(self):
+        self.sc.singelton(IMyClass, MyClass)
+        self.sc.singelton(IMyDependency, MyDependency)
+```
+
+The class `ServiceScope` extends an interface `IServiceScope` which ensures that the method `register_instances` exists in your implementation.  The `__new__` method is the python magic method that you can override whenever intializing an object.  We want to override this and pass the class and class type to the parent method.  This assigns an instance and is only created once.  Every new initialization of `MyServiceScope` will actually return the same object in memory.  A new instance is not created.  This is good since you don't want multiple service providers being inejcted into different parts of your application.
+
+In your Django method, you'll want to use the wrapper function and give the class type of your service scope class:
+
+```python
+from servicecollection import django_service_injector
+
+@django_service_injector(MyServiceScope)
+def index(request, my_class: MyClass):
+    return HttpResponse(my_class.get_view())
+```
+
+This will now use the `MyServiceScope` instance to fetch whatever class types are specified in the arguments of that method.  You can build your own wrapper functions around other frameworks if the one provided doesn't work for your purposes.  The `ServiceScope` class will help you define a scoped service provider that you can use in your wrapper function.
+
+Regardless of how you use `ServiceScope`, the `ServiceCollection` algorithm will always be based off of injecting instances by types through the constructor of a class.  How this is done is fully explained in this document.  Generally in a CLI app, you can use the `ServiceCollection` directly to register all your dependencies and build the service provider.  You would then start your app at a single entry point in your main method, or primary script. Using the `ServiceScope` is the same except it wraps the service collection into a singleton pattern so that it's better suited to be used in other frameworks.   Service Scopes allow you to use this library within a different architecture paradigm like Django.
+
+### Use the Service Scope For Your Containers
+
+You want to extend the `ServiceScope` class in your own scope container when you want to use this library with another framework like Django.  Extending the `ServiceScope` allows you to use it with the provided django injector wrapper function.  By extending the `ServiceScope`, you get to enjoy the singleton pattern out of the box.  Also, you can use the `IServiceScope` interface when you create your own wrapper function that takes your custom scope containers.  By working off of the interface `IServiceScope`, you can define a single function that can use any of your service scopes if you define more than one.
 
 ## Unit/Integration Testing
 
