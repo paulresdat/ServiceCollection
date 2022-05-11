@@ -1,11 +1,12 @@
+from __future__ import annotations
 import enum
-import inspect
 import json
 import os
 import re
+from collections import ChainMap
 from abc import ABCMeta, abstractmethod
 from argparse import Namespace
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, cast, Union
+from typing import Any, Dict, Iterable, Mapping, Optional, cast, Union
 
 
 class ServiceCollectionConst(enum.Enum):
@@ -187,12 +188,14 @@ class Configuration():
         self.__globals = _parent_globals
 
     def retrieve_instance(self):
-        members = inspect.getmembers(self.class_type)
-        annotations = self.__get_annotations(members)
+        #members = inspect.getmembers(self.class_type)
+        annotations = self.__get_annotations(self.class_type)
         instance = self.__map_conf(self.json_data, self.class_type, annotations)
         return instance
 
     def __map_conf(self, conf: Union[Dict[str, Any], Namespace], object_to_map: type, mapper_info: Dict[str, Dict[str, Any]]):
+        if issubclass(object_to_map, enum.Enum):
+            return
         o = object_to_map()
         mapped_conf = {}
         if type(conf) is Namespace:
@@ -206,10 +209,15 @@ class Configuration():
             name = self.__scrub_name(x)
             val = mapped_conf[x]
             if name in mapper_info.keys():
-                if mapper_info[name]['inner_annotations'] is not None:
+                # check for a special enum type
+                if issubclass(mapper_info[name]['type'], enum.Enum):
+                    # we treat enums like strings
+                    mapped = val
+                elif mapper_info[name]['inner_annotations'] is not None:
                     mapped = self.__map_conf(val, mapper_info[name]['type'], mapper_info[name]['inner_annotations'])
                 else:
                     mapped = val
+                # if we don't have enum values as properties this may error out
                 setattr(o, mapper_info[name]['name'], mapped)
 
         # put the None in where there is no mapping
@@ -223,24 +231,24 @@ class Configuration():
     def __scrub_name(self, name: str) -> str:
         return re.sub('[^A-Za-z0-9_]', '', name).lower()
 
-    def __get_annotations(self, members: List[Tuple[str, Any]]):
-        annotations = None
-        for x in members:
-            if x[0] == '__annotations__':
-                annotations = x[1]
-                break
+    def __get_annotations_from_type(self, cls: type) -> ChainMap[str, Any]:
+        return ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
+
+    def __get_annotations(self, ct: Any):
+        annotations = self.__get_annotations_from_type(ct)
         if annotations is None:
             raise RuntimeError((
                 "There are no known mapped properties of your configuration class. " +
                 "You need to globally specify the property.  Please consult documentation. "
             ))
+        return self.__get_cl_atts_from_annotations(annotations)
 
+    def __get_cl_atts_from_annotations(self, annotations: Union[Dict[str, Any], ChainMap[str, Any]]):
         cl_atts: Dict[str, Dict[str, Any]] = {}
         for x in annotations:
             cl_name = self.__scrub_name(x)
             try:
                 # weird typing type workaround?  Needs more analysis
-                # print(x)
                 alias_name = type(annotations[x]).__name__
                 if (alias_name == "_SpecialGenericAlias" or alias_name == "_GenericAlias"):
                     n = annotations[x].__dict__['_name']
@@ -267,9 +275,8 @@ class Configuration():
                 type(cl_type).__name__ != "_SpecialGenericAlias" and
                 cl_type.__name__ not in ['str', 'float', 'int', 'list', 'dict', 'tuple', 'bool', 'typing.List']
             ):
-                members = inspect.getmembers(cl_type)
                 try:
-                    inner_annotations = self.__get_annotations(members)
+                    inner_annotations = self.__get_annotations(cl_type)
                 except Exception as e:
                     print("There was an issue retrieving annotations for " + x + " with type " + str(cl_type.__name__))
                     raise e
