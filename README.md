@@ -507,7 +507,7 @@ The context will now be aware of your own environment variable and will transfor
 For ease of use, I've exposed the context as an entire dictionary using Python's inbuilt utilities.  You can access the entire context's dictionary by exploding it as follows: `{ **ctxt }`.  For a configuration section, you can print out it's `settings` attribute which is publically available to you: `ctxt.get_section("setting_one:property").settings`.  Note that the ServiceCollection expects either a context or section object though.  The ability to expose the context as a dictionary is for debugging purposes so you can easily inspect the object by printing out to the console when you're working on your app.
 
 ### Enum Support
-There are times where you may want to have a class map a string to an enum name in your configuration object.  The configuration option now has support of treating enums as strings however it's up to you to add that support in your object.  You'll want to take advantage of the `@property` wrapper function.  The following code example illustrates the an objects ability to work with enum values from string values that you have in your configuration file:
+There are times where you may want to have a class map a string to an enum name in your configuration object.  The configuration context service now has support of treating enums as regular values, however it's up to you to add that support in your object.  You'll want to take advantage of the `@property` wrapper function.  The following code example illustrates an object's ability to work with enum values from string values that you have in your configuration file:
 
 ```python
 import enum
