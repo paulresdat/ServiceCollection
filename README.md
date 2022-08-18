@@ -774,7 +774,7 @@ class ServiceB(object):
 
 class ServiceA(object):
     def __init__(self, service_b: ServiceB):
-        self.__service_b = service_provider
+        self.__service_b = service_b
 
     def get_name(self):
         return self.__service_b.service_name
